@@ -3,7 +3,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from app.agent.deps import ChatUnavailableError
+from app.agent.deps import AssistantUnavailableError, ChatUnavailableError
 from app.api.v1.router import router as api_v1_router
 from app.config import settings
 from app.services.task_service import TaskNotFoundError
@@ -39,6 +39,17 @@ async def chat_unavailable_handler(
     request: Request, exc: ChatUnavailableError
 ) -> JSONResponse:
     """Provider failures and usage-limit breaches never leak details."""
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "The assistant is unavailable, try again later"},
+    )
+
+
+@app.exception_handler(AssistantUnavailableError)
+async def assistant_unavailable_handler(
+    request: Request, exc: AssistantUnavailableError
+) -> JSONResponse:
+    """Provider failures and invalid model output never leak details."""
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content={"detail": "The assistant is unavailable, try again later"},

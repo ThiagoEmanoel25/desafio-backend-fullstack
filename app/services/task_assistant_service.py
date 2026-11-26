@@ -1,24 +1,69 @@
+"""Task assistant service: loads the user-scoped context and runs the agent.
+
+Read-only: it never commits. A provider failure, or output that still fails
+validation after PydanticAI's retries, becomes `AssistantUnavailableError`.
 """
-Task Assistant Service
-=======================
-Builds the context and runs the task assistant agent.
 
-You should implement here:
-- assist_task(db, user_id, task_id) -> TaskAssistance
-    1. Load the task with task_service.get_task(db, user_id, task_id)
-       (raises "not found" if it doesn't exist or belongs to another user)
-    2. Load a small list of related open tasks of the SAME user
-       (e.g. same department, not completed, max 5)
-    3. Run `task_assistant` with AssistantDeps(task=..., related_tasks=...)
-    4. Return result.output
-    5. Log the call (task_id, duration, success/failure) — never log the
-       full prompt with user data at INFO level
+import logging
+import time
+import uuid
+from collections.abc import Sequence
 
-Error handling: if the LLM provider fails or the output can't be validated
-after retries, raise an application error that the route converts into a
-controlled HTTP error (e.g. 503).
+from sqlalchemy.ext.asyncio import AsyncSession
 
-(Optional/diferencial) Cache the result so the same task is not sent to
-the LLM again until it changes (e.g. store it in a JSON column together
-with the task's updated_at, or use Redis).
-"""
+from app.agent.deps import AssistantDeps, AssistantUnavailableError
+from app.agent.task_assistant import task_assistant
+from app.models.task import Task
+from app.schemas.assistance import TaskAssistance
+from app.services import task_service
+
+logger = logging.getLogger(__name__)
+
+MAX_RELATED_TASKS = 5
+
+
+async def _related_tasks(
+    db: AsyncSession, user_id: uuid.UUID, task: Task
+) -> Sequence[Task]:
+    """Build the complementary context: the seam where retrieval will plug in."""
+    return await task_service.list_related_open_tasks(
+        db, user_id, task, limit=MAX_RELATED_TASKS
+    )
+
+
+async def assist_task(
+    db: AsyncSession, user_id: uuid.UUID, task_id: uuid.UUID
+) -> TaskAssistance:
+    """Analyse the user's task; `TaskNotFoundError` comes before any model call."""
+    task = await task_service.get_task(db, user_id, task_id)
+    related = await _related_tasks(db, user_id, task)
+
+    model_name = str(task_assistant.model) if task_assistant.model else "unknown"
+    log = {"task_id": str(task_id), "user_id": str(user_id), "model": model_name}
+    logger.info("task_assist_requested", extra=log)
+    started = time.perf_counter()
+    try:
+        result = await task_assistant.run(
+            "Evaluate this task and help me execute it.",
+            deps=AssistantDeps(task=task, related_tasks=related),
+        )
+    except Exception as exc:
+        logger.error(
+            "task_assist_completed",
+            extra={
+                **log,
+                "success": False,
+                "error_type": type(exc).__name__,
+                "duration_ms": round((time.perf_counter() - started) * 1000),
+            },
+        )
+        raise AssistantUnavailableError from None
+    logger.info(
+        "task_assist_completed",
+        extra={
+            **log,
+            "success": True,
+            "duration_ms": round((time.perf_counter() - started) * 1000),
+        },
+    )
+    return result.output

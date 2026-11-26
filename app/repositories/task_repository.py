@@ -45,6 +45,32 @@ async def list_by_user(
     return result.all()
 
 
+async def list_open_in_department(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    department: str,
+    *,
+    exclude_id: uuid.UUID,
+    limit: int,
+) -> Sequence[Task]:
+    """Return the user's non-completed tasks in `department`, newest first.
+
+    Scoped by `user_id` and capped by `limit` in SQL, `exclude_id` left out.
+    """
+    result = await db.scalars(
+        select(Task)
+        .where(
+            Task.user_id == user_id,
+            Task.department == department,
+            Task.status != TaskStatus.completed,
+            Task.id != exclude_id,
+        )
+        .order_by(Task.created_at.desc(), Task.id)
+        .limit(limit)
+    )
+    return result.all()
+
+
 async def create(db: AsyncSession, task: Task) -> Task:
     """Add the task and flush so its defaults are populated (no commit)."""
     db.add(task)

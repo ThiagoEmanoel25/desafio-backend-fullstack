@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.models.task import Task
 from app.models.user import User
+from app.schemas.assistance import TaskAssistance
 from app.schemas.task import (
     TaskCreate,
     TaskPriority,
@@ -16,7 +17,7 @@ from app.schemas.task import (
     TaskStatus,
     TaskUpdate,
 )
-from app.services import task_service
+from app.services import task_assistant_service, task_service
 
 router = APIRouter()
 
@@ -100,3 +101,21 @@ async def delete_task(
     await task_service.delete_task(db, current_user.id, task_id)
     await _commit(db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/{task_id}/assist",
+    response_model=TaskAssistance,
+    summary="Get AI assistance for a task",
+)
+async def assist_task(
+    task_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TaskAssistance:
+    """Analyse one of the current user's tasks with the LLM; may take a few seconds.
+
+    Returns a structured evaluation and plan. 404 if the task is missing or not
+    theirs (before any model call); 503 if the model fails.
+    """
+    return await task_assistant_service.assist_task(db, current_user.id, task_id)

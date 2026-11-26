@@ -1,9 +1,12 @@
 """Agent runtime dependencies and the controlled agent failure."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.task import Task
 
 
 class ChatUnavailableError(Exception):
@@ -17,3 +20,15 @@ class AgentDeps:
     db: AsyncSession
     user_id: UUID
     created_task_ids: list[UUID] = field(default_factory=list)
+
+
+class AssistantUnavailableError(Exception):
+    """The task assistant run failed (provider error or invalid output)."""
+
+
+@dataclass
+class AssistantDeps:
+    """The task under analysis and a short list of the same user's related tasks."""
+
+    task: Task
+    related_tasks: Sequence[Task]

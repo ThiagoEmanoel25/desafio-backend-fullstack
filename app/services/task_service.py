@@ -46,6 +46,15 @@ async def list_tasks(
     )
 
 
+async def list_related_open_tasks(
+    db: AsyncSession, user_id: uuid.UUID, task: Task, *, limit: int
+) -> Sequence[Task]:
+    """Other open tasks of the user in the same department as `task`."""
+    return await task_repository.list_open_in_department(
+        db, user_id, task.department, exclude_id=task.id, limit=limit
+    )
+
+
 async def get_task(db: AsyncSession, user_id: uuid.UUID, task_id: uuid.UUID) -> Task:
     """Return the user's task or raise `TaskNotFoundError`."""
     task = await task_repository.get_by_id(db, user_id, task_id)

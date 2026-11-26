@@ -1,9 +1,10 @@
+import { apiFetch } from './client'
 import type { ChatResponse } from '../types'
 
-/**
- * TODO: call POST /v1/chat with { message } using apiFetch().
- */
+// No trailing slash: /v1/chat is served at exactly this path.
 export async function sendChatMessage(message: string): Promise<ChatResponse> {
-  void message
-  throw new Error('sendChatMessage() not implemented yet')
+  return apiFetch<ChatResponse>('/v1/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
 }

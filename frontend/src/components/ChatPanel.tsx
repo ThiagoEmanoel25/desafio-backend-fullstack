@@ -40,6 +40,7 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
     setError(null)
     setThinking(true)
     let failed = false
+    let finished = false
     try {
       await streamChatMessage(text, conversationId, (ev) => {
         if (ev.type === 'meta') setConversationId(ev.conversation_id)
@@ -47,6 +48,7 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
           setStreaming(true)
           setAgentText((t) => t + ev.text)
         } else if (ev.type === 'done') {
+          finished = true
           setConversationId(ev.conversation_id)
           setAgentText(() => ev.reply)
           if (ev.created_task) onTaskCreated(ev.created_task)
@@ -55,6 +57,11 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
           setError(UNAVAILABLE)
         }
       })
+      // The connection closed without `done` or `error`: the reply is incomplete.
+      if (!finished && !failed) {
+        failed = true
+        setError(UNAVAILABLE)
+      }
     } catch (err) {
       failed = true
       if (onApiError(err)) return

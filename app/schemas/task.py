@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class TaskStatus(StrEnum):
@@ -47,6 +47,14 @@ class TaskUpdate(BaseModel):
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
     department: str | None = Field(default=None, min_length=2, max_length=100)
+
+    @model_validator(mode="after")
+    def _reject_null_for_required_fields(self) -> "TaskUpdate":
+        """Omit a required column to keep it; an explicit null would hit NOT NULL."""
+        for name in ("title", "status", "priority", "department"):
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null")
+        return self
 
 
 class TaskResponse(BaseModel):

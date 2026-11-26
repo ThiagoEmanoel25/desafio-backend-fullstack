@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { listTasks } from '../api/tasks'
 import ChatPanel from '../components/ChatPanel'
@@ -16,20 +16,26 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [assistedTask, setAssistedTask] = useState<Task | null>(null)
+  const [assistedId, setAssistedId] = useState<string | null>(null)
+  // Derived from the list, so a deleted task closes the panel and an edited one stays fresh.
+  const assistedTask = tasks.find((t) => t.id === assistedId) ?? null
+
+  // Keep the latest onLogout in a ref so handleApiError (and the effects that depend on it)
+  // keep a stable identity even if the parent re-renders with a new callback.
+  const onLogoutRef = useRef(onLogout)
+  useEffect(() => {
+    onLogoutRef.current = onLogout
+  }, [onLogout])
 
   // The single place where an expired session (401) logs the user out.
   // Returns true when the error was a 401 and has been handled.
-  const handleApiError = useCallback(
-    (err: unknown): boolean => {
-      if (err instanceof ApiError && err.status === 401) {
-        onLogout()
-        return true
-      }
-      return false
-    },
-    [onLogout],
-  )
+  const handleApiError = useCallback((err: unknown): boolean => {
+    if (err instanceof ApiError && err.status === 401) {
+      onLogoutRef.current()
+      return true
+    }
+    return false
+  }, [])
 
   const refresh = useCallback(async () => {
     try {
@@ -73,7 +79,7 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
             <TaskList
               tasks={tasks}
               onChanged={() => void refresh()}
-              onAssist={setAssistedTask}
+              onAssist={(task) => setAssistedId(task.id)}
               onApiError={handleApiError}
             />
           )}
@@ -86,7 +92,7 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
         <TaskAssistantPanel
           key={assistedTask.id}
           task={assistedTask}
-          onClose={() => setAssistedTask(null)}
+          onClose={() => setAssistedId(null)}
           onApiError={handleApiError}
         />
       )}

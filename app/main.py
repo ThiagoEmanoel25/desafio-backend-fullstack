@@ -3,6 +3,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from app.agent.agent import ChatUnavailableError
 from app.api.v1.router import router as api_v1_router
 from app.config import settings
 from app.services.task_service import TaskNotFoundError
@@ -30,6 +31,17 @@ async def task_not_found_handler(
     """Missing and not-yours are the same 404, so a foreign task never leaks."""
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND, content={"detail": "Task not found"}
+    )
+
+
+@app.exception_handler(ChatUnavailableError)
+async def chat_unavailable_handler(
+    request: Request, exc: ChatUnavailableError
+) -> JSONResponse:
+    """Provider failures and usage-limit breaches never leak details."""
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "The assistant is unavailable, try again later"},
     )
 
 

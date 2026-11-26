@@ -1,38 +1,61 @@
-"""
-AI Agent Tools (Tool Calling)
-==============================
-Functions the PydanticAI agent can call autonomously.
+"""Tools the chat agent can call. `user_id` is read only from `ctx.deps`."""
 
-Required:
-- create_task_tool: receives the entities extracted by the LLM (title,
-  priority, department, optional description), validates them with the
-  `TaskCreate` schema and saves the task via `task_service.create_task`
-  for the CURRENT user (`ctx.deps.user_id`).
+from dataclasses import dataclass, field
+from typing import Annotated
+from uuid import UUID
 
-Optional (diferencial):
-- list_tasks_tool: lets the user ask "quais são minhas tarefas urgentes?"
+from pydantic import Field, ValidationError
+from pydantic_ai import ModelRetry, RunContext
+from sqlalchemy.ext.asyncio import AsyncSession
 
-Each tool must:
-1. Have typed parameters and a clear docstring (PydanticAI sends the
-   docstring and the parameter types to the LLM as the tool description)
-2. Get the db session and user id from `ctx.deps` — NEVER from the LLM
-3. Return a small structured result (dict or Pydantic model)
+from app.schemas.task import TaskCreate, TaskPriority
+from app.services import task_service
 
-Example:
-    from pydantic_ai import RunContext
 
-    async def create_task_tool(
-        ctx: RunContext["AgentDeps"],
-        title: str,
-        priority: TaskPriority,
-        department: str,
-        description: str | None = None,
-    ) -> dict:
-        \"\"\"Create a new task for the current user.\"\"\"
-        data = TaskCreate(title=title, priority=priority, department=department,
-                          description=description)
-        task = await task_service.create_task(ctx.deps.db, ctx.deps.user_id, data)
-        return {"task_id": str(task.id), "title": task.title}
+@dataclass
+class AgentDeps:
+    """Runtime dependencies. `user_id` is here so the model can never choose it.
 
-Docs: https://ai.pydantic.dev/tools/
-"""
+    Defined next to the tool that reads it (agent.py re-exports it) because
+    PydanticAI resolves the tool's annotations at registration time.
+    """
+
+    db: AsyncSession
+    user_id: UUID
+    created_task_ids: list[UUID] = field(default_factory=list)
+
+
+async def create_task_tool(
+    ctx: RunContext[AgentDeps],
+    title: Annotated[str, Field(min_length=3, max_length=200)],
+    department: Annotated[str, Field(min_length=2, max_length=100)],
+    priority: TaskPriority = TaskPriority.medium,
+    description: Annotated[str | None, Field(max_length=2000)] = None,
+) -> dict:
+    """Create a new task owned by the current user.
+
+    Args:
+        title: Short task title, 3 to 200 characters.
+        department: Department responsible for the task, 2 to 100 characters,
+            exactly as the user named it. Never invent one.
+        priority: One of low, medium, high, urgent.
+        description: Optional details, up to 2000 characters.
+    """
+    try:
+        data = TaskCreate(
+            title=title,
+            department=department,
+            priority=priority,
+            description=description,
+        )
+    except ValidationError as exc:
+        fields = ", ".join(str(e["loc"][0]) for e in exc.errors())
+        raise ModelRetry(f"Invalid task fields: {fields}. Fix them and retry.") from exc
+    task = await task_service.create_task(ctx.deps.db, ctx.deps.user_id, data)
+    ctx.deps.created_task_ids.append(task.id)
+    return {
+        "task_id": str(task.id),
+        "title": task.title,
+        "priority": task.priority,
+        "department": task.department,
+    }

@@ -1,12 +1,22 @@
-"""
-Chat Schemas
-============
-Pydantic v2 models for the AI chat endpoint.
+"""Schemas for the AI chat endpoint."""
 
-You should implement here:
-- ChatRequest: message (str, not empty, reasonable max length)
-- ChatResponse: reply (str) - the agent's text answer,
-  created_task (TaskResponse | None) - the task created by the agent, if any
+from typing import Annotated
 
-The frontend uses `created_task` to refresh the task list after a chat message.
-"""
+from pydantic import BaseModel, StringConstraints
+
+from app.schemas.task import TaskResponse
+
+
+class ChatRequest(BaseModel):
+    """A single user message for the task agent."""
+
+    message: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)
+    ]
+
+
+class ChatResponse(BaseModel):
+    """The agent's reply plus the task it created, if any."""
+
+    reply: str
+    created_task: TaskResponse | None = None

@@ -22,8 +22,13 @@ from sqlalchemy.pool import NullPool
 
 from app.api.deps import get_db
 from app.config import settings
+from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.models import Base
+from app.models.user import User
+
+# Long enough to silence PyJWT's HMAC key-length warning.
+settings.JWT_SECRET_KEY = "test-secret-key-at-least-32-bytes-long"
 
 
 def _test_database_url() -> str:
@@ -99,3 +104,37 @@ async def async_client(
             yield client
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+PASSWORD = "correct-horse-battery"
+
+
+async def _make_user(db: AsyncSession, email: str) -> User:
+    user = User(
+        email=email, full_name="Test User", hashed_password=hash_password(PASSWORD)
+    )
+    db.add(user)
+    await db.commit()
+    return user
+
+
+@pytest.fixture
+async def user(db_session: AsyncSession) -> User:
+    """An active user; log in with `PASSWORD`."""
+    return await _make_user(db_session, "user@example.com")
+
+
+@pytest.fixture
+async def other_user(db_session: AsyncSession) -> User:
+    """A second active user, for isolation tests."""
+    return await _make_user(db_session, "other@example.com")
+
+
+@pytest.fixture
+def auth_headers(user: User) -> dict[str, str]:
+    return {"Authorization": f"Bearer {create_access_token(str(user.id))}"}
+
+
+@pytest.fixture
+def other_auth_headers(other_user: User) -> dict[str, str]:
+    return {"Authorization": f"Bearer {create_access_token(str(other_user.id))}"}

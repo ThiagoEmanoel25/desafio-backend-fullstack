@@ -8,3 +8,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B"]
 [lint.isort]
 known-first-party = ["app", "seed", "tests"]
 known-third-party = ["alembic"]
+
+[lint.flake8-bugbear]
+# FastAPI's `Depends(...)` defaults are the framework idiom, not a mutable default.
+extend-immutable-calls = ["fastapi.Depends"]

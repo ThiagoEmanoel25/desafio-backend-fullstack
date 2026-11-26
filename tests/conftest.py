@@ -27,9 +27,6 @@ from app.main import app
 from app.models import Base
 from app.models.user import User
 
-# Long enough to silence PyJWT's HMAC key-length warning.
-settings.JWT_SECRET_KEY = "test-secret-key-at-least-32-bytes-long"
-
 
 def _test_database_url() -> str:
     if not settings.TEST_DATABASE_URL:

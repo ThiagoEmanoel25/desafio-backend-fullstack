@@ -7,13 +7,25 @@ from fastapi.responses import JSONResponse
 from app.agent.deps import AssistantUnavailableError, ChatUnavailableError
 from app.api.v1.router import router as api_v1_router
 from app.config import settings
+from app.core.logging import setup_logging
 from app.services.task_service import TaskNotFoundError
 
-# TODO: call setup_logging() from app/core/logging.py here
+setup_logging()
+
+DESCRIPTION = """\
+Task manager with an AI assistant: every user owns their own tasks, can ask a
+chat agent to create them in natural language, and can ask a second agent to
+evaluate a task and plan its execution.
+
+All `/v1/tasks` and `/v1/chat` routes need a bearer token. In this page, click
+**Authorize** and send your e-mail in the `username` field: the button posts
+form data to `POST /v1/auth/login` and reuses the token it returns.
+"""
 
 app = FastAPI(
     title=settings.APP_NAME,
     version="0.1.0",
+    description=DESCRIPTION,
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -61,7 +73,12 @@ async def assistant_unavailable_handler(
     )
 
 
-@app.get("/health", tags=["health"])
+@app.get(
+    "/health",
+    tags=["health"],
+    response_model=dict[str, str],
+    summary="Health check",
+)
 async def health_check() -> dict[str, str]:
     """Liveness probe."""
     return {"status": "ok"}

@@ -1,25 +1,63 @@
-"""
-Structured Logging
-==================
-Configure the application's logging so that every log line is structured
-(JSON, or at least a consistent key=value format).
+"""Structured (JSON) logging for the whole application.
 
-You should implement here:
-- setup_logging(): configures the root logger with the level from
-  settings.LOG_LEVEL and a structured formatter
-- Call setup_logging() once at application startup (app/main.py)
+Call `setup_logging()` once at startup (`app/main.py`). After that, any module
+can log with the standard library and the line comes out as one JSON object:
 
-Then, in your modules, use the standard library logger:
-
-    import logging
-    logger = logging.getLogger(__name__)
     logger.info("task_created", extra={"task_id": str(task.id)})
+    {"timestamp": "...", "level": "INFO", "logger": "app.services.task_service",
+     "message": "task_created", "task_id": "..."}
 
-Example of an expected log line:
-    {"timestamp": "2026-01-01T12:00:00Z", "level": "INFO",
-     "logger": "app.services.task_service", "message": "task_created",
-     "task_id": "..."}
-
-Tip: you can write a small `logging.Formatter` subclass that returns
-`json.dumps(...)`, or use a library such as `python-json-logger` or `structlog`.
+Never put a password, a password hash, a JWT, an e-mail address, a full prompt
+or a task's title/description in `extra` — ids, durations and outcomes only.
 """
+
+import json
+import logging
+from datetime import UTC, datetime
+
+from app.config import settings
+
+# Every attribute a bare LogRecord already carries. Whatever a call site passed
+# via `extra=` is exactly the difference between a record's `__dict__` and this.
+_STANDARD_RECORD_ATTRS = frozenset(
+    logging.LogRecord("", 0, "", 0, "", None, None).__dict__
+) | {"message", "asctime", "taskName"}
+
+
+class JsonFormatter(logging.Formatter):
+    """Render a record as a single-line JSON object, `extra` keys included."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "timestamp": datetime.fromtimestamp(record.created, UTC).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        payload.update(
+            {
+                key: value
+                for key, value in record.__dict__.items()
+                if key not in _STANDARD_RECORD_ATTRS
+            }
+        )
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        # default=str so an unexpected object in `extra` degrades instead of raising.
+        return json.dumps(payload, default=str)
+
+
+def setup_logging() -> None:
+    """Install one JSON stream handler on the root logger.
+
+    Idempotent: uvicorn imports the module tree more than once under
+    `--reload`, and a second call must not double every line. Uvicorn's own
+    loggers keep their configuration; only the application's lines are JSON.
+    """
+    root = logging.getLogger()
+    root.setLevel(settings.LOG_LEVEL.upper())
+    if any(isinstance(handler.formatter, JsonFormatter) for handler in root.handlers):
+        return
+    handler = logging.StreamHandler()
+    handler.setFormatter(JsonFormatter())
+    root.handlers = [handler]

@@ -203,41 +203,93 @@ docker compose up --build
 | Frontend | http://localhost:5173 |
 | PostgreSQL | `localhost:5433` (change it with `POSTGRES_HOST_PORT` if the port is in use) |
 
-Useful commands while the containers are running:
+With the containers up, apply the migration and load the seed (**this is what creates the test users**):
 
 ```bash
-docker compose exec api alembic revision --autogenerate -m "create users and tasks tables"
 docker compose exec api alembic upgrade head
 docker compose exec api python -m seed.seed_data
-docker compose exec api pytest -v
-docker compose exec api ruff check .
 ```
+
+Other useful commands:
+
+```bash
+docker compose exec api ruff check .
+docker compose exec db createdb -U app desafio_test   # once, the suite needs its own database
+docker compose exec -e TEST_DATABASE_URL=postgresql+asyncpg://app:app@db:5432/desafio_test api pytest -v
+```
+
+### Seed credentials
+
+| E-mail | Password |
+|---|---|
+| `ana@example.com` | `password123` |
+| `bruno@example.com` | `password123` |
+
+```bash
+# inside Docker
+docker compose exec api python -m seed.seed_data
+# locally (with the variables from the "Locally" section exported)
+python -m seed.seed_data
+```
+
+Each user gets 5 tasks across different statuses, priorities and departments, with more than
+one open task in the same department (that is what the assistant's related-task context uses)
+and one task without a description on purpose. The seed is **idempotent**: it looks users up
+by e-mail and tasks by `(user_id, title)`, so running it twice duplicates nothing.
 
 ### Locally (API outside Docker)
 
 ```bash
-# Start only the database
+# 1. Start only the database (exposed on localhost:5433)
 docker compose up db -d
 
-# In .env, point to the exposed port:
-# DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio
+# 2. Create the test database (once)
+docker compose exec db createdb -U app desafio_test
 
+# 3. Python environment
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt -r requirements-dev.txt
 
+# 4. Point the URLs at the exposed port, in this shell only
+#    (do not edit .env - see the note below)
+export DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio
+export TEST_DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio_test
+export PYDANTIC_AI_NO_BANNER=1
+
+# 5. Migration, seed and API
 alembic upgrade head
 python -m seed.seed_data
 uvicorn app.main:app --reload
 ```
 
+**Why export instead of editing `.env`:** `.env` is the file `docker compose` hands to the
+container, where the database is `db:5432`. Changing `DATABASE_URL` there breaks the
+containerised API. Environment variables win over `.env` in pydantic-settings, so exporting in
+your shell fixes the local case without breaking the Docker one. Keep the three lines in a
+`.dev-env.sh` of your own (it is in `.gitignore`) and `source` it before `pytest`, `alembic`,
+`uvicorn` and the seed.
+
+### Running the tests
+
+```bash
+export TEST_DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio_test
+pytest -v
+ruff check .
+```
+
+The suite runs against a **separate** database (`desafio_test`): it creates the tables once per
+session, drops them at the end and truncates them after every test, and it refuses to start if
+`TEST_DATABASE_URL` is unset or equal to `DATABASE_URL`. An autouse fixture forces
+`pydantic_ai.models.ALLOW_MODEL_REQUESTS = False`, so no test can reach a real LLM.
+
 Frontend:
 
 ```bash
 cd frontend
-cp .env.example .env
+cp .env.example .env               # VITE_API_URL=http://localhost:8000
 npm install
-npm run dev
+npm run dev                        # http://localhost:5173
 ```
 
 ## Project Structure

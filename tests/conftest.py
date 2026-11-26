@@ -25,14 +25,17 @@ from app.config import settings
 from app.main import app
 from app.models import Base
 
-models.ALLOW_MODEL_REQUESTS = False
-
 
 def _test_database_url() -> str:
     if not settings.TEST_DATABASE_URL:
         pytest.exit(
             "TEST_DATABASE_URL is not set. Point it at a separate Postgres "
             "database (e.g. run `source .dev-env.sh`).",
+            returncode=2,
+        )
+    if settings.TEST_DATABASE_URL == settings.DATABASE_URL:
+        pytest.exit(
+            "TEST_DATABASE_URL equals DATABASE_URL; the suite drops tables.",
             returncode=2,
         )
     return settings.TEST_DATABASE_URL

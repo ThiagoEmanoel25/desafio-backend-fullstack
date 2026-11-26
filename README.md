@@ -249,6 +249,7 @@ docker compose up --build
 | ReDoc | http://localhost:8000/redoc |
 | Frontend | http://localhost:5173 |
 | PostgreSQL | `localhost:5433` (mude com `POSTGRES_HOST_PORT` se a porta estiver ocupada) |
+| Redis | `localhost:6379` (mude com `REDIS_HOST_PORT` se a porta estiver ocupada) |
 
 Com os containers no ar, aplique a migration e carregue o seed (**é isso que cria os usuários de teste**):
 

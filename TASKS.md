@@ -485,4 +485,4 @@ registrada no README como próximo passo.
 | D2 | Fase 8: histórico de chat (`conversation_id`) + tool `list_tasks` + chat com streaming (pedido do Thiago) + frontend | alta | testes de histórico cruzado/TTL/degradação + build e prints do chat | feita (74 testes, build, lint, prints desktop e mobile) |
 | D3 | Fases 9–10: índice derivado + busca híbrida (lexical + vetorial, RRF) | média | migration sobe/desce + testes de isolamento, hash, exclusão, fallback | feita (83 testes, migration sobe/desce/sobe) |
 | D4 | Fases 11–12: re-ranking, contexto do assistente, `search_task_memory`, avaliação Recall@5/MRR@5 | média | testes de injeção/fallback + relatório de métricas | feita (92 testes; Recall@5 e MRR@5 = 1,000 antes e depois, estável em 6 execuções) |
-| D5 | Verificação final: Docker Compose, README, demonstrações | alta | compose up + roteiro de demonstração executado | pendente |
+| D5 | Verificação final: Docker Compose, README, demonstrações | alta | compose up + roteiro de demonstração executado | feita (compose com 4 serviços saudáveis; cache, conversa, isolamento e assistência demonstrados) |

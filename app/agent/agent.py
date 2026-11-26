@@ -2,14 +2,10 @@
 
 from pydantic_ai import Agent
 
+from app.agent.deps import AgentDeps
 from app.agent.prompts import SYSTEM_PROMPT
-from app.agent.tools import AgentDeps, create_task_tool
+from app.agent.tools import create_task_tool
 from app.config import settings
-
-
-class ChatUnavailableError(Exception):
-    """The agent run failed (provider error, usage limit, unexpected error)."""
-
 
 agent = Agent(
     settings.LLM_MODEL,
@@ -17,5 +13,3 @@ agent = Agent(
     instructions=SYSTEM_PROMPT,
     tools=[create_task_tool],
 )
-
-__all__ = ["AgentDeps", "ChatUnavailableError", "agent"]

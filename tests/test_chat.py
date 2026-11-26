@@ -44,7 +44,7 @@ async def _tasks(db: AsyncSession) -> list[Task]:
 
 
 async def test_chat_requires_auth(async_client: AsyncClient):
-    response = await async_client.post("/v1/chat/", json={"message": "oi"})
+    response = await async_client.post("/v1/chat", json={"message": "oi"})
     assert response.status_code == 401
 
 
@@ -53,7 +53,7 @@ async def test_chat_rejects_empty_message(
 ):
     for message in ("", "   "):
         response = await async_client.post(
-            "/v1/chat/", json={"message": message}, headers=auth_headers
+            "/v1/chat", json={"message": message}, headers=auth_headers
         )
         assert response.status_code == 422
 
@@ -67,7 +67,7 @@ async def test_chat_creates_task_for_current_user(
 ):
     with agent.override(model=TestModel()):
         response = await async_client.post(
-            "/v1/chat/", json={"message": REFERENCE}, headers=auth_headers
+            "/v1/chat", json={"message": REFERENCE}, headers=auth_headers
         )
     assert response.status_code == 200
     tasks = await _tasks(db_session)
@@ -86,7 +86,7 @@ async def test_chat_reference_message_creates_expected_task(
     # (that would need a real LLM).
     with agent.override(model=_calls_tool(REFERENCE_ARGS)):
         response = await async_client.post(
-            "/v1/chat/", json={"message": REFERENCE}, headers=auth_headers
+            "/v1/chat", json={"message": REFERENCE}, headers=auth_headers
         )
     assert response.status_code == 200
     (task,) = await _tasks(db_session)
@@ -110,15 +110,15 @@ async def test_tool_rejects_model_supplied_user_id(
     auth_headers: dict[str, str],
 ):
     assert "user_id" not in inspect.signature(create_task_tool).parameters
-    # The model tries to target the other user, then gives up and answers.
-    with agent.override(
-        model=_calls_tool({**REFERENCE_ARGS, "user_id": str(other_user.id)})
-    ):
+    # The model first tries to target the other user, then makes a valid call.
+    tampered = {**REFERENCE_ARGS, "user_id": str(other_user.id)}
+    with agent.override(model=_calls_tool(tampered, REFERENCE_ARGS)):
         response = await async_client.post(
-            "/v1/chat/", json={"message": REFERENCE}, headers=auth_headers
+            "/v1/chat", json={"message": REFERENCE}, headers=auth_headers
         )
     assert response.status_code == 200
-    assert all(t.user_id != other_user.id for t in await _tasks(db_session))
+    (task,) = await _tasks(db_session)
+    assert task.user_id == user.id
 
 
 async def test_chat_handles_llm_failure(
@@ -129,23 +129,28 @@ async def test_chat_handles_llm_failure(
 
     with agent.override(model=FunctionModel(boom)):
         response = await async_client.post(
-            "/v1/chat/", json={"message": REFERENCE}, headers=auth_headers
+            "/v1/chat", json={"message": REFERENCE}, headers=auth_headers
         )
     assert response.status_code == 503
-    assert "secret" not in response.text
+    assert response.json() == {
+        "detail": "The assistant is unavailable, try again later"
+    }
+    assert "Traceback" not in response.text
+    assert "RuntimeError" not in response.text
     assert await _tasks(db_session) == []
 
 
 async def test_chat_invalid_tool_arguments_retry(
     async_client: AsyncClient, db_session: AsyncSession, auth_headers: dict[str, str]
 ):
-    # First call has a one-character title: ModelRetry, nothing persisted.
+    # First call has a one-character title: PydanticAI's own schema validation
+    # rejects it and asks the model to retry, so nothing is persisted.
     # Second call is valid and persists.
     with agent.override(
         model=_calls_tool({**REFERENCE_ARGS, "title": "x"}, REFERENCE_ARGS)
     ):
         response = await async_client.post(
-            "/v1/chat/", json={"message": REFERENCE}, headers=auth_headers
+            "/v1/chat", json={"message": REFERENCE}, headers=auth_headers
         )
     assert response.status_code == 200
     (task,) = await _tasks(db_session)

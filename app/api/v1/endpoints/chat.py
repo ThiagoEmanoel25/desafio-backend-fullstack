@@ -7,17 +7,19 @@ from fastapi import APIRouter, Depends
 from pydantic_ai import UsageLimits
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent.agent import AgentDeps, ChatUnavailableError, agent
+from app.agent.agent import agent
+from app.agent.deps import AgentDeps, ChatUnavailableError
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.schemas.task import TaskResponse
 from app.services import task_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/", response_model=ChatResponse, summary="Chat with the task agent")
+@router.post("", response_model=ChatResponse, summary="Chat with the task agent")
 async def chat(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
@@ -38,6 +40,16 @@ async def chat(
             deps=deps,
             usage_limits=UsageLimits(request_limit=5, tool_calls_limit=3),
         )
+        # Read the created row before committing: the flush already populated it.
+        created_task = (
+            TaskResponse.model_validate(
+                await task_service.get_task(
+                    db, current_user.id, deps.created_task_ids[-1]
+                )
+            )
+            if deps.created_task_ids
+            else None
+        )
         await db.commit()
     except Exception as exc:
         await db.rollback()
@@ -52,11 +64,6 @@ async def chat(
         )
         raise ChatUnavailableError from None
 
-    created_task = (
-        await task_service.get_task(db, current_user.id, deps.created_task_ids[-1])
-        if deps.created_task_ids
-        else None
-    )
     logger.info(
         "chat_agent_run",
         extra={

@@ -3,7 +3,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from app.agent.agent import ChatUnavailableError
+from app.agent.deps import ChatUnavailableError
 from app.api.v1.router import router as api_v1_router
 from app.config import settings
 from app.services.task_service import TaskNotFoundError

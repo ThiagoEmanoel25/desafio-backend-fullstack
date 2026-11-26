@@ -1,36 +1,31 @@
 """Tools the chat agent can call. `user_id` is read only from `ctx.deps`."""
 
-from dataclasses import dataclass, field
 from typing import Annotated
-from uuid import UUID
 
 from pydantic import Field, ValidationError
 from pydantic_ai import ModelRetry, RunContext
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.task import TaskCreate, TaskPriority
+from app.agent.deps import AgentDeps
+from app.schemas.task import (
+    DEPARTMENT_MAX,
+    DEPARTMENT_MIN,
+    DESCRIPTION_MAX,
+    TITLE_MAX,
+    TITLE_MIN,
+    TaskCreate,
+    TaskPriority,
+)
 from app.services import task_service
-
-
-@dataclass
-class AgentDeps:
-    """Runtime dependencies. `user_id` is here so the model can never choose it.
-
-    Defined next to the tool that reads it (agent.py re-exports it) because
-    PydanticAI resolves the tool's annotations at registration time.
-    """
-
-    db: AsyncSession
-    user_id: UUID
-    created_task_ids: list[UUID] = field(default_factory=list)
 
 
 async def create_task_tool(
     ctx: RunContext[AgentDeps],
-    title: Annotated[str, Field(min_length=3, max_length=200)],
-    department: Annotated[str, Field(min_length=2, max_length=100)],
+    title: Annotated[str, Field(min_length=TITLE_MIN, max_length=TITLE_MAX)],
+    department: Annotated[
+        str, Field(min_length=DEPARTMENT_MIN, max_length=DEPARTMENT_MAX)
+    ],
     priority: TaskPriority = TaskPriority.medium,
-    description: Annotated[str | None, Field(max_length=2000)] = None,
+    description: Annotated[str | None, Field(max_length=DESCRIPTION_MAX)] = None,
 ) -> dict:
     """Create a new task owned by the current user.
 
@@ -49,6 +44,7 @@ async def create_task_tool(
             description=description,
         )
     except ValidationError as exc:
+        # Safety net: input that passes the Field limits above but fails TaskCreate.
         fields = ", ".join(str(e["loc"][0]) for e in exc.errors())
         raise ModelRetry(f"Invalid task fields: {fields}. Fix them and retry.") from exc
     task = await task_service.create_task(ctx.deps.db, ctx.deps.user_id, data)

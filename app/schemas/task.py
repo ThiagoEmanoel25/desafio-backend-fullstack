@@ -30,20 +30,25 @@ class TaskPriority(StrEnum):
     urgent = "urgent"
 
 
+TITLE_MIN, TITLE_MAX = 3, 200
+DESCRIPTION_MAX = 2000
+DEPARTMENT_MIN, DEPARTMENT_MAX = 2, 100
+
+
 class TaskCreate(BaseModel):
     """Payload to create a task (from the API or from the agent tool)."""
 
-    title: str = Field(min_length=3, max_length=200)
-    description: str | None = Field(default=None, max_length=2000)
+    title: str = Field(min_length=TITLE_MIN, max_length=TITLE_MAX)
+    description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
     priority: TaskPriority = TaskPriority.medium
-    department: str = Field(min_length=2, max_length=100)
+    department: str = Field(min_length=DEPARTMENT_MIN, max_length=DEPARTMENT_MAX)
 
 
 class TaskUpdate(BaseModel):
     """Partial update payload: only the fields that are sent are changed."""
 
     title: str | None = Field(default=None, min_length=3, max_length=200)
-    description: str | None = Field(default=None, max_length=2000)
+    description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
     department: str | None = Field(default=None, min_length=2, max_length=100)

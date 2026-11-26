@@ -24,6 +24,7 @@ from app.schemas.task import (
     TaskStatus,
     TaskUpdate,
 )
+from app.services import task_retrieval
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class TaskNotFoundError(Exception):
 async def create_task(db: AsyncSession, user_id: uuid.UUID, data: TaskCreate) -> Task:
     """Create a task owned by `user_id`."""
     task = await task_repository.create(db, Task(**data.model_dump(), user_id=user_id))
+    await task_retrieval.index_task(db, task)
     await cache.bump_task_list_version(user_id)
     logger.info(
         "task_created", extra={"task_id": str(task.id), "user_id": str(user_id)}
@@ -115,6 +117,7 @@ async def update_task(
     """Apply only the fields the caller sent."""
     task = await get_task(db, user_id, task_id)
     task = await task_repository.update(db, task, data.model_dump(exclude_unset=True))
+    await task_retrieval.index_task(db, task)
     await cache.bump_task_list_version(user_id)
     return task
 

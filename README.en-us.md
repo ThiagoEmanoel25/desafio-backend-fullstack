@@ -300,6 +300,14 @@ npm run dev                        # http://localhost:5173
 - **What the model gets.** The static `SYSTEM_PROMPT`, that trimmed history and the new message. Tasks only enter through `list_tasks` (same `task_service` as the API, no `user_id` argument, `status`/`priority` filters, at most 10 results with `id`, `title`, `status`, `priority`, `department`).
 - **Streaming.** `POST /v1/chat/stream` (same body, authenticated) answers `text/event-stream` with `data: <json>` events: `{"type":"meta","conversation_id"}`, then `{"type":"delta","text"}`, then `{"type":"done","reply","created_task"|null,"conversation_id"}` or `{"type":"error","detail"}`. Built on `agent.run_stream_events`; the DB session is opened inside the generator (through the same, overridable `get_db`), committed once after a successful run, and the task list is invalidated after the commit.
 
+## Task search index (hybrid retrieval)
+
+- `task_search_index` is a **derived projection** of each task (one row per `user_id + task_id`, removed by `ON DELETE CASCADE`). Its content comes only from title, description, department, priority and status; chat and AI answers never enter the corpus.
+- Indexing runs in `task_service` on create and update (API and chat tool alike). `source_hash` (sha256) skips re-embedding when nothing changed. If embedding fails the task is still saved and the row has no vector (`task_embedding_failed` log).
+- `retrieve_related_tasks` ([app/services/task_retrieval.py](app/services/task_retrieval.py)) filters by `user_id` in SQL and fuses two channels with RRF (k=60), up to 20 candidates each: Postgres full-text (`to_tsvector('simple', ...)` + `ts_rank`, GIN index, always on) and cosine similarity over embeddings of the same model. Each result keeps its origin (`lexical`, `vector`, `both`) and scores.
+- **No pgvector**: vectors are stored as `ARRAY(float)` and cosine is computed in Python over the user's tasks. Fine at challenge scale, not for large corpora.
+- Configuration: `EMBEDDING_MODEL` (any PydanticAI embedding model, e.g. `openai:text-embedding-3-small`). Empty or `none` (default) = lexical only, no key. Each row records the model that produced its vector. Run the seed (idempotent) to index existing tasks.
+
 ## Project Structure
 
 ```

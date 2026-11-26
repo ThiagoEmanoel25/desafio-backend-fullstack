@@ -363,13 +363,13 @@ agentes com tarefas que já pertencem ao produto.
 
 ## Fase 9 — Índice derivado das tarefas
 
-- [ ] Criar projeção `task_search_index` ligada à tarefa e ao usuário.
-- [ ] Armazenar conteúdo pesquisável, embedding opcional e modelo utilizado.
-- [ ] Armazenar hash dos campos que geraram o índice.
-- [ ] Garantir unicidade por `user_id + task_id`.
-- [ ] Remover o índice por cascade quando a tarefa for excluída.
-- [ ] Criar migration revisada manualmente.
-- [ ] Não criar endpoints de documentos, notas ou memória genérica.
+- [x] Criar projeção `task_search_index` ligada à tarefa e ao usuário.
+- [x] Armazenar conteúdo pesquisável, embedding opcional e modelo utilizado.
+- [x] Armazenar hash dos campos que geraram o índice.
+- [x] Garantir unicidade por `user_id + task_id`.
+- [x] Remover o índice por cascade quando a tarefa for excluída.
+- [x] Criar migration revisada manualmente.
+- [x] Não criar endpoints de documentos, notas ou memória genérica.
 
 Campos de origem permitidos:
 
@@ -382,16 +382,16 @@ Campos de origem permitidos:
 
 ## Fase 10 — Indexação e recuperação
 
-- [ ] Indexar ou reindexar após criar e editar uma tarefa.
-- [ ] Usar `source_hash` para evitar embedding desnecessário.
-- [ ] Não desfazer a gravação da tarefa se o embedding falhar.
-- [ ] Implementar busca lexical sempre disponível.
-- [ ] Implementar busca vetorial quando houver embedding compatível.
-- [ ] Manter o modelo de embedding configurável e registrar qual versão gerou
+- [x] Indexar ou reindexar após criar e editar uma tarefa.
+- [x] Usar `source_hash` para evitar embedding desnecessário.
+- [x] Não desfazer a gravação da tarefa se o embedding falhar.
+- [x] Implementar busca lexical sempre disponível.
+- [x] Implementar busca vetorial quando houver embedding compatível.
+- [x] Manter o modelo de embedding configurável e registrar qual versão gerou
       cada vetor.
-- [ ] Buscar no máximo 20 candidatos por canal.
-- [ ] Fundir rankings lexical e vetorial com RRF.
-- [ ] Preservar a origem e os scores de cada resultado.
+- [x] Buscar no máximo 20 candidatos por canal.
+- [x] Fundir rankings lexical e vetorial com RRF.
+- [x] Preservar a origem e os scores de cada resultado.
 
 Assinatura mínima esperada:
 
@@ -483,6 +483,6 @@ registrada no README como próximo passo.
 |---|------|-----------|---------------|--------|
 | D1 | Fase 8: Redis resiliente + cache da lista e da assistência | alta | testes de isolamento/invalidação/degradação + `pytest`, `ruff` | feita (62 testes, ruff ok) |
 | D2 | Fase 8: histórico de chat (`conversation_id`) + tool `list_tasks` + chat com streaming (pedido do Thiago) + frontend | alta | testes de histórico cruzado/TTL/degradação + build e prints do chat | feita (74 testes, build, lint, prints desktop e mobile) |
-| D3 | Fases 9–10: índice derivado + busca híbrida (lexical + vetorial, RRF) | média | migration sobe/desce + testes de isolamento, hash, exclusão, fallback | pendente |
+| D3 | Fases 9–10: índice derivado + busca híbrida (lexical + vetorial, RRF) | média | migration sobe/desce + testes de isolamento, hash, exclusão, fallback | feita (83 testes, migration sobe/desce/sobe) |
 | D4 | Fases 11–12: re-ranking, contexto do assistente, `search_task_memory`, avaliação Recall@5/MRR@5 | média | testes de injeção/fallback + relatório de métricas | pendente |
 | D5 | Verificação final: Docker Compose, README, demonstrações | alta | compose up + roteiro de demonstração executado | pendente |

@@ -340,6 +340,14 @@ O banco `desafio_test` precisa existir (`docker compose exec db createdb -U app 
 - **A mesma sessão em todo lugar.** `app.dependency_overrides[get_db]` devolve exatamente a `AsyncSession` que o teste usa para asserção, então o teste vê o que a requisição escreveu sem precisar de commit.
 - **Nenhum teste chega a uma LLM real.** Uma fixture `autouse` força `pydantic_ai.models.ALLOW_MODEL_REQUESTS = False` durante toda a suíte. Quem esquecer de um `agent.override(model=...)` **falha com erro**, em vez de sair pela rede e gastar token. Os testes usam `TestModel` ou `FunctionModel` conforme o caso.
 
+## Índice de busca das tarefas (busca híbrida)
+
+- `task_search_index` é uma **projeção derivada** de cada tarefa (uma linha por `user_id + task_id`, removida por `ON DELETE CASCADE`). O conteúdo vem só de título, descrição, departamento, prioridade e status; chat e respostas da IA nunca entram no corpus.
+- A indexação roda em `task_service` ao criar e editar (vale para a API e para a tool do chat). O `source_hash` (sha256) evita recalcular o embedding quando nada mudou. Se o embedding falhar, a tarefa é salva mesmo assim e a linha fica sem vetor (log `task_embedding_failed`).
+- `retrieve_related_tasks` ([app/services/task_retrieval.py](app/services/task_retrieval.py)) filtra por `user_id` no SQL e combina dois canais com RRF (k=60), até 20 candidatos cada: full-text do Postgres (`to_tsvector('simple', ...)` + `ts_rank`, índice GIN, sempre disponível) e similaridade de cosseno sobre os embeddings do mesmo modelo. Cada resultado guarda a origem (`lexical`, `vector`, `both`) e os scores.
+- **Sem pgvector**: o vetor fica em `ARRAY(float)` e o cosseno é calculado em Python sobre as tarefas do usuário. Serve para a escala do desafio, não para corpora grandes.
+- Configuração: `EMBEDDING_MODEL` (qualquer modelo de embedding do PydanticAI, ex. `openai:text-embedding-3-small`). Vazio ou `none` (padrão) = só busca lexical, sem chave. Cada linha registra o modelo que gerou o vetor. Para indexar tarefas existentes, rode o seed (idempotente).
+
 ## Contexto enviado a cada agente
 
 São **dois agentes separados**, com prompts, deps e responsabilidades diferentes. Em nenhum dos dois o `user_id` é algo que o modelo possa ver ou escolher: ele vem do JWT, via `get_current_user`, e entra pelas deps.

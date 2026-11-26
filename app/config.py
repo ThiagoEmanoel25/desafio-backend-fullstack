@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Provider API keys are read directly from the environment by PydanticAI.
     LLM_MODEL: str = "test"
 
+    # Task search index (hybrid retrieval). Any PydanticAI embedding model
+    # string, e.g. "openai:text-embedding-3-small". Empty or "none" disables
+    # embeddings: retrieval is then lexical only (default, no API key needed).
+    EMBEDDING_MODEL: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Return CORS_ORIGINS as a list."""

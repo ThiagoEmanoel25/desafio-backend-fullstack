@@ -22,6 +22,7 @@ from app.core.security import hash_password
 from app.models.task import Task
 from app.models.user import User
 from app.schemas.task import TaskPriority, TaskStatus
+from app.services.task_retrieval import backfill_index
 
 PASSWORD = "password123"
 
@@ -153,6 +154,9 @@ async def main() -> None:
     async with async_session_maker() as db:
         for spec in SEED_USERS:
             await _seed_user(db, spec)
+        await db.flush()
+        # Index existing and new tasks; unchanged ones are skipped by hash.
+        print(f"  search index: {await backfill_index(db)} tasks checked")
         await db.commit()
     await engine.dispose()
     print("Done. The credentials are in README.md.")

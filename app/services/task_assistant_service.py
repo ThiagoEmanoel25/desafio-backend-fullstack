@@ -2,6 +2,8 @@
 
 Read-only: it never commits. A provider failure, or output that still fails
 validation after PydanticAI's retries, becomes `AssistantUnavailableError`.
+Results are cached per user, task and `updated_at`, so any change to the task
+skips the previous assistance.
 """
 
 import logging
@@ -13,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.deps import AssistantDeps, AssistantUnavailableError
 from app.agent.task_assistant import task_assistant
+from app.config import settings
+from app.core import cache
 from app.models.task import Task
 from app.schemas.assistance import TaskAssistance
 from app.services import task_service
@@ -36,10 +40,19 @@ async def assist_task(
 ) -> TaskAssistance:
     """Analyse the user's task; `TaskNotFoundError` comes before any model call."""
     task = await task_service.get_task(db, user_id, task_id)
+    log = {"task_id": str(task_id), "user_id": str(user_id)}
+    key = f"assist:{user_id}:{task_id}:{task.updated_at.isoformat()}"
+    if (cached := await cache.get_value(key)) is not None:
+        try:
+            assistance = TaskAssistance.model_validate_json(cached)
+            logger.info("task_assist_cache_hit", extra=log)
+            return assistance
+        except ValueError:
+            logger.warning("cache_degraded", extra={"operation": "decode_assist"})
     related = await _related_tasks(db, user_id, task)
 
     model_name = str(task_assistant.model) if task_assistant.model else "unknown"
-    log = {"task_id": str(task_id), "user_id": str(user_id), "model": model_name}
+    log["model"] = model_name
     logger.info("task_assist_requested", extra=log)
     started = time.perf_counter()
     try:
@@ -65,5 +78,8 @@ async def assist_task(
             "success": True,
             "duration_ms": round((time.perf_counter() - started) * 1000),
         },
+    )
+    await cache.set_value(
+        key, result.output.model_dump_json(), settings.TASK_ASSIST_CACHE_TTL_SECONDS
     )
     return result.output

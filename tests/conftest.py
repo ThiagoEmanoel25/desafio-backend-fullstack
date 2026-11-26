@@ -13,6 +13,7 @@ with PydanticAI's `TestModel` / `FunctionModel` instead.
 import asyncio
 from collections.abc import AsyncGenerator, Iterator
 
+import fakeredis
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic_ai import models
@@ -22,6 +23,7 @@ from sqlalchemy.pool import NullPool
 
 from app.api.deps import get_db
 from app.config import settings
+from app.core import cache
 from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.models import Base
@@ -51,6 +53,14 @@ def _block_real_llm_calls() -> Iterator[None]:
     models.ALLOW_MODEL_REQUESTS = False
     yield
     models.ALLOW_MODEL_REQUESTS = previous
+
+
+@pytest.fixture(autouse=True)
+def fake_redis(monkeypatch: pytest.MonkeyPatch) -> fakeredis.FakeAsyncRedis:
+    """A fresh in-memory Redis per test; the real one is never touched."""
+    client = fakeredis.FakeAsyncRedis(decode_responses=True)
+    monkeypatch.setattr(cache, "_client", client)
+    return client
 
 
 @pytest.fixture(scope="session", autouse=True)

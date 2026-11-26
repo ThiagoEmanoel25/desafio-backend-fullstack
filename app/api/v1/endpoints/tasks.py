@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core import cache
 from app.models.task import Task
 from app.models.user import User
 from app.schemas.assistance import TaskAssistance
@@ -22,13 +23,19 @@ from app.services import task_assistant_service, task_service
 router = APIRouter()
 
 
-async def _commit(db: AsyncSession) -> None:
-    """Commit the request's transaction; a constraint failure becomes a 409."""
+async def _commit(db: AsyncSession, user_id: uuid.UUID) -> None:
+    """Commit the request's transaction; a constraint failure becomes a 409.
+
+    The list cache is invalidated again after the commit: a concurrent read
+    between the service's pre-commit bump and the commit could otherwise cache
+    the old rows under the new version.
+    """
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Task conflict") from None
+    await cache.bump_task_list_version(user_id)
 
 
 @router.post(
@@ -44,7 +51,7 @@ async def create_task(
 ) -> Task:
     """Create a task owned by the current user."""
     task = await task_service.create_task(db, current_user.id, payload)
-    await _commit(db)
+    await _commit(db, current_user.id)
     return task
 
 
@@ -56,12 +63,14 @@ async def list_tasks(
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[Task]:
-    """List the current user's tasks, newest first, optionally filtered."""
-    tasks = await task_service.list_tasks(
+) -> list[TaskResponse]:
+    """List the current user's tasks, newest first, optionally filtered.
+
+    Served from a per-user Redis cache when available, Postgres otherwise.
+    """
+    return await task_service.list_tasks_cached(
         db, current_user.id, status=status, priority=priority, skip=skip, limit=limit
     )
-    return list(tasks)
 
 
 @router.get("/{task_id}", response_model=TaskResponse, summary="Get a task")
@@ -83,7 +92,7 @@ async def update_task(
 ) -> Task:
     """Change only the fields sent; 404 if missing or not theirs."""
     task = await task_service.update_task(db, current_user.id, task_id, payload)
-    await _commit(db)
+    await _commit(db, current_user.id)
     return task
 
 
@@ -99,7 +108,7 @@ async def delete_task(
 ) -> Response:
     """Delete one of the current user's tasks; 404 if missing or not theirs."""
     await task_service.delete_task(db, current_user.id, task_id)
-    await _commit(db)
+    await _commit(db, current_user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

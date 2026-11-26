@@ -138,15 +138,12 @@ async def _seed_user(db: AsyncSession, spec: dict) -> None:
         print(f"  user {spec['email']}: already there, skipped")
 
     existing_titles = set(
-        (
-            await db.execute(select(Task.title).where(Task.user_id == user.id))
-        ).scalars()
+        (await db.execute(select(Task.title).where(Task.user_id == user.id))).scalars()
     )
     missing = [t for t in spec["tasks"] if t["title"] not in existing_titles]
     db.add_all(Task(**task, user_id=user.id) for task in missing)
     print(
-        f"  tasks: {len(missing)} created, "
-        f"{len(spec['tasks']) - len(missing)} skipped"
+        f"  tasks: {len(missing)} created, {len(spec['tasks']) - len(missing)} skipped"
     )
 
 

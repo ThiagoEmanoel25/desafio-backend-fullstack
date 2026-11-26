@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # CORS (comma-separated list of allowed frontend origins)
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
+    # Redis (cache only, never the source of truth). Empty URL disables it.
+    REDIS_URL: str = "redis://redis:6379/0"
+    REDIS_TIMEOUT_SECONDS: float = 0.2
+    TASK_LIST_CACHE_TTL_SECONDS: int = 60
+    TASK_ASSIST_CACHE_TTL_SECONDS: int = 3600
+
     # AI Agent
     # Any model string supported by PydanticAI, e.g.:
     #   "test"                    -> fake model, no API key needed (great for dev/tests)

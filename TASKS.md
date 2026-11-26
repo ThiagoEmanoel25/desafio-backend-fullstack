@@ -273,17 +273,17 @@ conjunto: Redis para cache da lista, cache da assistência, histórico e a tool
 
 ## Fase 8 — Redis resiliente
 
-- [ ] Adicionar Redis ao Docker Compose e às configurações tipadas.
-- [ ] Criar uma dependência pequena para obter o cliente Redis.
-- [ ] Definir timeout curto; falha do Redis não derruba a API.
-- [ ] Testar o comportamento degradado sem Redis.
+- [x] Adicionar Redis ao Docker Compose e às configurações tipadas.
+- [x] Criar uma dependência pequena para obter o cliente Redis.
+- [x] Definir timeout curto; falha do Redis não derruba a API.
+- [x] Testar o comportamento degradado sem Redis.
 
 ### Cache da lista
 
-- [ ] Usar chave que contenha `user_id`, versão e hash dos filtros.
-- [ ] Incrementar a versão do usuário ao criar, editar ou excluir tarefa.
-- [ ] Em cache miss, consultar PostgreSQL e preencher o cache.
-- [ ] Aplicar TTL com pequena variação.
+- [x] Usar chave que contenha `user_id`, versão e hash dos filtros.
+- [x] Incrementar a versão do usuário ao criar, editar ou excluir tarefa.
+- [x] Em cache miss, consultar PostgreSQL e preencher o cache.
+- [x] Aplicar TTL com pequena variação.
 
 Formato esperado:
 
@@ -294,9 +294,9 @@ tasks:list:{user_id}:{version}:{filters_hash}
 
 ### Cache da assistência
 
-- [ ] Cachear pelo usuário, tarefa e versão atual da tarefa.
-- [ ] Não reutilizar assistência quando `updated_at` mudar.
-- [ ] Usar PostgreSQL como fonte da verdade em todo cache miss.
+- [x] Cachear pelo usuário, tarefa e versão atual da tarefa.
+- [x] Não reutilizar assistência quando `updated_at` mudar.
+- [x] Usar PostgreSQL como fonte da verdade em todo cache miss.
 
 Formato esperado:
 
@@ -329,11 +329,11 @@ chat:{user_id}:{conversation_id}
 
 Testes:
 
-- [ ] Cache nunca cruza dados entre usuários.
-- [ ] Mutação invalida a versão da lista.
-- [ ] Alterar tarefa invalida a assistência anterior.
+- [x] Cache nunca cruza dados entre usuários.
+- [x] Mutação invalida a versão da lista.
+- [x] Alterar tarefa invalida a assistência anterior.
 - [ ] Usuário não acessa conversa de outro usuário.
-- [ ] API continua funcional quando Redis está indisponível.
+- [x] API continua funcional quando Redis está indisponível.
 - [ ] Histórico e tool não fazem chamada real de modelo nos testes.
 
 Commits sugeridos:
@@ -476,3 +476,13 @@ O projeto está pronto quando todo o obrigatório funciona e os dois diferenciai
 estão testados sem enfraquecer isolamento, previsibilidade ou simplicidade. Uma
 funcionalidade parcial não entra na entrega: deve ser concluída ou removida e
 registrada no README como próximo passo.
+
+## Quadro de execução dos diferenciais
+
+| # | Task | Prioridade | Prova exigida | Status |
+|---|------|-----------|---------------|--------|
+| D1 | Fase 8: Redis resiliente + cache da lista e da assistência | alta | testes de isolamento/invalidação/degradação + `pytest`, `ruff` | feita (62 testes, ruff ok) |
+| D2 | Fase 8: histórico de chat (`conversation_id`) + tool `list_tasks` + chat com streaming (pedido do Thiago) + frontend | alta | testes de histórico cruzado/TTL/degradação + build e prints do chat | pendente |
+| D3 | Fases 9–10: índice derivado + busca híbrida (lexical + vetorial, RRF) | média | migration sobe/desce + testes de isolamento, hash, exclusão, fallback | pendente |
+| D4 | Fases 11–12: re-ranking, contexto do assistente, `search_task_memory`, avaliação Recall@5/MRR@5 | média | testes de injeção/fallback + relatório de métricas | pendente |
+| D5 | Verificação final: Docker Compose, README, demonstrações | alta | compose up + roteiro de demonstração executado | pendente |

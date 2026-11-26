@@ -344,16 +344,29 @@ O banco `desafio_test` precisa existir (`docker compose exec db createdb -U app 
 
 São **dois agentes separados**, com prompts, deps e responsabilidades diferentes. Em nenhum dos dois o `user_id` é algo que o modelo possa ver ou escolher: ele vem do JWT, via `get_current_user`, e entra pelas deps.
 
-### Agente do chat (`POST /v1/chat`)
+### Agente do chat (`POST /v1/chat` e `POST /v1/chat/stream`)
 
 | | |
 |---|---|
-| **Vai no prompt** | o prompt fixo ([app/agent/prompts.py](app/agent/prompts.py), `SYSTEM_PROMPT`: papel, mapa de prioridade em português, "não invente título nem departamento") e **somente a mensagem daquela requisição** |
-| **Fica de fora** | nenhuma tarefa, nenhum dado do usuário, nenhum histórico de conversa — cada requisição é independente |
-| **`user_id`** | `AgentDeps.user_id`, lido pela tool como `ctx.deps.user_id`; a tool **não tem** parâmetro `user_id` |
-| **Limites** | `UsageLimits(request_limit=5, tool_calls_limit=3)`; qualquer falha vira 503 com detalhe fixo |
+| **Vai no prompt** | o prompt fixo ([app/agent/prompts.py](app/agent/prompts.py), `SYSTEM_PROMPT`: papel, quando usar cada tool, mapa de prioridade em português, "não invente título nem departamento"), o **histórico da conversa** lido do Redis (no máximo `CHAT_HISTORY_MAX_MESSAGES`, padrão 20 mensagens, cortado sempre num turno do usuário para não separar tool call de tool return) e a mensagem nova |
+| **Fica de fora** | qualquer histórico enviado pelo cliente (o contrato só aceita `conversation_id`), dados de outro usuário, e-mail, hash de senha; tarefas só entram se o modelo chamar `list_tasks` |
+| **`user_id`** | `AgentDeps.user_id`, lido pelas tools como `ctx.deps.user_id`; nenhuma tool **tem** parâmetro `user_id` |
+| **Limites** | `UsageLimits(request_limit=5, tool_calls_limit=3)`; `list_tasks` devolve no máximo 10 tarefas (só `id`, `title`, `status`, `priority`, `department`, filtros `status`/`priority`); qualquer falha vira 503 (ou evento `error` no stream) com detalhe fixo |
 
-O agente não lê o banco: ele só escreve, por uma única tool (`create_task_tool`).
+Tools: `create_task_tool` (escreve) e `list_tasks` (lê pelo mesmo `task_service` da API). Elas rodam em sequência, porque dividem uma `AsyncSession`.
+
+**Histórico.** O `conversation_id` (UUID) é opcional na requisição; se faltar, o servidor gera um e o devolve. A conversa serializada pelo PydanticAI (`ModelMessagesTypeAdapter`) fica **só no Redis**, em `chat:{user_id}:{conversation_id}`, com TTL `CHAT_HISTORY_TTL_SECONDS` (padrão 24 h). Como o `user_id` vem do JWT, o `conversation_id` de outro usuário não encontra nada e vira conversa nova. Redis fora do ar: a conversa segue sem histórico e o log registra `cache_degraded`. Mensagens e respostas nunca vão para o Postgres.
+
+**Streaming.** `POST /v1/chat/stream` (mesmo corpo, autenticado) responde `text/event-stream`, uma linha `data: <json>` por evento:
+
+```text
+data: {"type":"meta","conversation_id":"..."}
+data: {"type":"delta","text":"Tarefa "}
+data: {"type":"done","reply":"Tarefa criada.","created_task":{...}|null,"conversation_id":"..."}
+data: {"type":"error","detail":"The assistant is unavailable, try again later"}
+```
+
+Usa `agent.run_stream_events` (entrega texto incremental mesmo com tool call no meio). A sessão do banco é aberta **dentro do gerador** (pelo mesmo `get_db`, respeitando o override dos testes), então continua viva até o fim do stream; o commit é único, depois do run, e a lista de tarefas é invalidada depois do commit.
 
 ### Assistente de tarefas (`POST /v1/tasks/{task_id}/assist`)
 

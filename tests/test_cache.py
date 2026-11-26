@@ -141,7 +141,8 @@ async def test_chat_tool_create_invalidates_list(
             "/v1/chat", json={"message": "crie"}, headers=auth_headers
         )
     assert response.status_code == 200
-    assert await _version(fake_redis, user.id) == 1
+    # Bumped by task_service before commit and by the route after commit.
+    assert await _version(fake_redis, user.id) == 2
     assert len((await async_client.get("/v1/tasks/", headers=auth_headers)).json()) == 1
 
 

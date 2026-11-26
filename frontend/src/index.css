@@ -17,8 +17,8 @@ h1, h2 { margin: 0 0 0.75rem; }
 .stack { display: flex; flex-direction: column; gap: 0.75rem; }
 .row { display: flex; align-items: center; gap: 0.75rem; }
 .between { justify-content: space-between; }
-.grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-top: 1rem; }
-@media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+.grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem; margin-top: 1rem; }
+@media (max-width: 800px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 
 .card { background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 1rem; }
 .muted { color: #656d76; }
@@ -31,9 +31,11 @@ button:hover { background: #1a5fd0; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 button.danger { background: #cf222e; }
 button.danger:hover { background: #a40e26; }
+button.secondary { background: #f6f8fa; color: #1f2328; border: 1px solid #d0d7de; }
+button.secondary:hover { background: #eaeef2; }
 textarea { resize: vertical; min-height: 3.5rem; }
 .task-list, .chat-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .task { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.5rem 0; border-top: 1px solid #d0d7de; }
-.bubble { padding: 0.5rem 0.75rem; border-radius: 8px; white-space: pre-wrap; }
+.bubble { padding: 0.5rem 0.75rem; border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bubble.user { background: #ddf4ff; align-self: flex-end; }
 .bubble.agent { background: #f6f8fa; border: 1px solid #d0d7de; }

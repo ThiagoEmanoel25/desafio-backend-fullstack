@@ -14,6 +14,7 @@ from app.schemas.task import (
     TITLE_MIN,
     TaskCreate,
     TaskPriority,
+    TaskStatus,
 )
 from app.services import task_service
 
@@ -55,3 +56,38 @@ async def create_task_tool(
         "priority": task.priority,
         "department": task.department,
     }
+
+
+LIST_TASKS_MAX = 10
+
+
+async def list_tasks(
+    ctx: RunContext[AgentDeps],
+    status: TaskStatus | None = None,
+    priority: TaskPriority | None = None,
+    limit: Annotated[int, Field(ge=1, le=LIST_TASKS_MAX)] = LIST_TASKS_MAX,
+) -> list[dict]:
+    """List the current user's most recent tasks (at most 10).
+
+    Args:
+        status: Optional filter: pending, in_progress or completed.
+        priority: Optional filter: low, medium, high or urgent.
+        limit: How many tasks to return, 1 to 10.
+    """
+    tasks = await task_service.list_tasks(
+        ctx.deps.db,
+        ctx.deps.user_id,
+        status=status,
+        priority=priority,
+        limit=min(limit, LIST_TASKS_MAX),
+    )
+    return [
+        {
+            "id": str(t.id),
+            "title": t.title,
+            "status": t.status,
+            "priority": t.priority,
+            "department": t.department,
+        }
+        for t in tasks
+    ]

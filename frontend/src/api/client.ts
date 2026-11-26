@@ -2,7 +2,7 @@
 // Wraps fetch(): adds the base URL, the JSON headers and the JWT token,
 // and throws an ApiError for non-2xx responses.
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 const TOKEN_KEY = 'access_token'
 
 export class ApiError extends Error {

@@ -306,14 +306,14 @@ assist:{user_id}:{task_id}:{task_updated_at}
 
 ### Histórico de conversa
 
-- [ ] Adicionar `conversation_id` ao contrato do chat.
-- [ ] Gerar ou validar o identificador no servidor.
-- [ ] Persistir a conversa serializada pelo PydanticAI no Redis.
-- [ ] Passar a conversa recuperada ao agente sem aceitar histórico arbitrário
+- [x] Adicionar `conversation_id` ao contrato do chat.
+- [x] Gerar ou validar o identificador no servidor.
+- [x] Persistir a conversa serializada pelo PydanticAI no Redis.
+- [x] Passar a conversa recuperada ao agente sem aceitar histórico arbitrário
       enviado pelo frontend.
-- [ ] Limitar quantidade de turnos enviados ao modelo.
-- [ ] Aplicar TTL e impedir acesso cruzado por `conversation_id`.
-- [ ] Se Redis falhar, continuar sem histórico e registrar degradação.
+- [x] Limitar quantidade de turnos enviados ao modelo.
+- [x] Aplicar TTL e impedir acesso cruzado por `conversation_id`.
+- [x] Se Redis falhar, continuar sem histórico e registrar degradação.
 
 Formato esperado:
 
@@ -323,18 +323,18 @@ chat:{user_id}:{conversation_id}
 
 ### Tool de leitura
 
-- [ ] Implementar `list_tasks` usando o mesmo `task_service` da API.
-- [ ] Não aceitar `user_id` como argumento da tool.
-- [ ] Limitar filtros permitidos e quantidade de resultados.
+- [x] Implementar `list_tasks` usando o mesmo `task_service` da API.
+- [x] Não aceitar `user_id` como argumento da tool.
+- [x] Limitar filtros permitidos e quantidade de resultados.
 
 Testes:
 
 - [x] Cache nunca cruza dados entre usuários.
 - [x] Mutação invalida a versão da lista.
 - [x] Alterar tarefa invalida a assistência anterior.
-- [ ] Usuário não acessa conversa de outro usuário.
+- [x] Usuário não acessa conversa de outro usuário.
 - [x] API continua funcional quando Redis está indisponível.
-- [ ] Histórico e tool não fazem chamada real de modelo nos testes.
+- [x] Histórico e tool não fazem chamada real de modelo nos testes.
 
 Commits sugeridos:
 
@@ -482,7 +482,7 @@ registrada no README como próximo passo.
 | # | Task | Prioridade | Prova exigida | Status |
 |---|------|-----------|---------------|--------|
 | D1 | Fase 8: Redis resiliente + cache da lista e da assistência | alta | testes de isolamento/invalidação/degradação + `pytest`, `ruff` | feita (62 testes, ruff ok) |
-| D2 | Fase 8: histórico de chat (`conversation_id`) + tool `list_tasks` + chat com streaming (pedido do Thiago) + frontend | alta | testes de histórico cruzado/TTL/degradação + build e prints do chat | pendente |
+| D2 | Fase 8: histórico de chat (`conversation_id`) + tool `list_tasks` + chat com streaming (pedido do Thiago) + frontend | alta | testes de histórico cruzado/TTL/degradação + build e prints do chat | feita (74 testes, build, lint, prints desktop e mobile) |
 | D3 | Fases 9–10: índice derivado + busca híbrida (lexical + vetorial, RRF) | média | migration sobe/desce + testes de isolamento, hash, exclusão, fallback | pendente |
 | D4 | Fases 11–12: re-ranking, contexto do assistente, `search_task_memory`, avaliação Recall@5/MRR@5 | média | testes de injeção/fallback + relatório de métricas | pendente |
 | D5 | Verificação final: Docker Compose, README, demonstrações | alta | compose up + roteiro de demonstração executado | pendente |

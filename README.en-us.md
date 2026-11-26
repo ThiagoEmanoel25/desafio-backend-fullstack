@@ -294,6 +294,12 @@ npm install
 npm run dev                        # http://localhost:5173
 ```
 
+## Chat: history, `list_tasks` and streaming
+
+- **History.** `conversation_id` (UUID) is optional in the chat body; the server generates one when missing and returns it. The PydanticAI-serialized conversation lives **only in Redis** at `chat:{user_id}:{conversation_id}`, TTL `CHAT_HISTORY_TTL_SECONDS` (default 24 h). Only the last `CHAT_HISTORY_MAX_MESSAGES` (default 20) messages go back to the model, always cut at a user turn so a tool call is never split from its return. The client never sends history. Another user's `conversation_id` misses (the key carries the JWT `user_id`) and starts a new conversation. Redis down: the chat continues without history and logs `cache_degraded`. Messages never reach Postgres.
+- **What the model gets.** The static `SYSTEM_PROMPT`, that trimmed history and the new message. Tasks only enter through `list_tasks` (same `task_service` as the API, no `user_id` argument, `status`/`priority` filters, at most 10 results with `id`, `title`, `status`, `priority`, `department`).
+- **Streaming.** `POST /v1/chat/stream` (same body, authenticated) answers `text/event-stream` with `data: <json>` events: `{"type":"meta","conversation_id"}`, then `{"type":"delta","text"}`, then `{"type":"done","reply","created_task"|null,"conversation_id"}` or `{"type":"error","detail"}`. Built on `agent.run_stream_events`; the DB session is opened inside the generator (through the same, overridable `get_db`), committed once after a successful run, and the task list is invalidated after the commit.
+
 ## Project Structure
 
 ```

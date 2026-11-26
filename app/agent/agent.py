@@ -1,15 +1,16 @@
 """The chat agent: turns a natural-language message into a task via a tool."""
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, Tool
 
 from app.agent.deps import AgentDeps
 from app.agent.prompts import SYSTEM_PROMPT
-from app.agent.tools import create_task_tool
+from app.agent.tools import create_task_tool, list_tasks
 from app.config import settings
 
 agent = Agent(
     settings.LLM_MODEL,
     deps_type=AgentDeps,
     instructions=SYSTEM_PROMPT,
-    tools=[create_task_tool],
+    # Both tools share one AsyncSession, which cannot run two queries at once.
+    tools=[Tool(create_task_tool, sequential=True), Tool(list_tasks, sequential=True)],
 )

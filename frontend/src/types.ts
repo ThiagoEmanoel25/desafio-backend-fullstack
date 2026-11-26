@@ -27,7 +27,14 @@ export type TaskUpdate = Partial<TaskCreate & { status: TaskStatus }>
 export interface ChatResponse {
   reply: string
   created_task: Task | null
+  conversation_id: string
 }
+
+export type ChatStreamEvent =
+  | { type: 'meta'; conversation_id: string }
+  | { type: 'delta'; text: string }
+  | { type: 'done'; reply: string; created_task: Task | null; conversation_id: string }
+  | { type: 'error'; detail: string }
 
 export interface TokenResponse {
   access_token: string

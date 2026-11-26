@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     REDIS_TIMEOUT_SECONDS: float = 0.2
     TASK_LIST_CACHE_TTL_SECONDS: int = 60
     TASK_ASSIST_CACHE_TTL_SECONDS: int = 3600
+    # Chat history lives only in Redis: `chat:{user_id}:{conversation_id}`.
+    CHAT_HISTORY_TTL_SECONDS: int = 86400
+    # Most recent messages (requests + responses) sent back to the model.
+    CHAT_HISTORY_MAX_MESSAGES: int = 20
 
     # AI Agent
     # Any model string supported by PydanticAI, e.g.:

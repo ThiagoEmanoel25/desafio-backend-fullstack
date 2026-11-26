@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../api/client'
-import { sendChatMessage } from '../api/chat'
+import { streamChatMessage } from '../api/chat'
 import type { Task } from '../types'
 
 interface ChatPanelProps {
@@ -13,50 +13,96 @@ interface Message {
   text: string
 }
 
+const UNAVAILABLE = 'O assistente está indisponível agora.'
+
 export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([])
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
+  const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Replace the text of the last (agent) bubble.
+  function setAgentText(update: (text: string) => string) {
+    setMessages((m) => {
+      const last = m[m.length - 1]
+      return [...m.slice(0, -1), { ...last, text: update(last.text) }]
+    })
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = input.trim()
     if (!text || thinking) return
-    setMessages((m) => [...m, { role: 'user', text }])
+    setMessages((m) => [...m, { role: 'user', text }, { role: 'agent', text: '' }])
     setInput('')
     setError(null)
     setThinking(true)
+    let failed = false
     try {
-      const { reply, created_task } = await sendChatMessage(text)
-      setMessages((m) => [...m, { role: 'agent', text: reply }])
-      if (created_task) onTaskCreated(created_task)
+      await streamChatMessage(text, conversationId, (ev) => {
+        if (ev.type === 'meta') setConversationId(ev.conversation_id)
+        else if (ev.type === 'delta') {
+          setStreaming(true)
+          setAgentText((t) => t + ev.text)
+        } else if (ev.type === 'done') {
+          setConversationId(ev.conversation_id)
+          setAgentText(() => ev.reply)
+          if (ev.created_task) onTaskCreated(ev.created_task)
+        } else {
+          failed = true
+          setError(UNAVAILABLE)
+        }
+      })
     } catch (err) {
+      failed = true
       if (onApiError(err)) return
       setError(
         err instanceof ApiError && err.status === 503
-          ? 'O assistente está indisponível agora.'
+          ? UNAVAILABLE
           : 'Não foi possível falar com o assistente.',
       )
     } finally {
+      // Drop an agent bubble left empty by a failure.
+      if (failed) setMessages((m) => (m[m.length - 1]?.text ? m : m.slice(0, -1)))
       setThinking(false)
+      setStreaming(false)
     }
+  }
+
+  function newConversation() {
+    setConversationId(null)
+    setMessages([])
+    setError(null)
   }
 
   return (
     <aside className="card stack">
-      <h2>Assistente IA</h2>
+      <div className="row between">
+        <h2>Assistente IA</h2>
+        <button
+          type="button"
+          className="secondary"
+          onClick={newConversation}
+          disabled={thinking || messages.length === 0}
+        >
+          Nova conversa
+        </button>
+      </div>
       <p className="muted">
         Ex.: “Cadastre uma tarefa urgente chamada ‘Revisar relatório financeiro’ para o
-        departamento Comercial”
+        departamento Comercial” ou “Quais tarefas urgentes eu tenho?”
       </p>
-      <ul className="chat-log">
-        {messages.map((m, i) => (
-          <li key={i} className={`bubble ${m.role}`}>
-            {m.text}
-          </li>
-        ))}
-        {thinking && <li className="muted">pensando…</li>}
+      <ul className="chat-log" aria-live="polite">
+        {messages.map((m, i) =>
+          m.text ? (
+            <li key={i} className={`bubble ${m.role}`}>
+              {m.text}
+            </li>
+          ) : null,
+        )}
+        {thinking && !streaming && <li className="muted">digitando…</li>}
       </ul>
       {error && <p className="error">{error}</p>}
       <form onSubmit={handleSubmit} className="stack">
@@ -67,7 +113,7 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
           onChange={(e) => setInput(e.target.value)}
         />
         <button type="submit" disabled={thinking || !input.trim()}>
-          Enviar
+          {thinking ? 'Respondendo…' : 'Enviar'}
         </button>
       </form>
     </aside>

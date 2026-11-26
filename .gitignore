@@ -50,3 +50,8 @@ htmlcov/
 
 # ruff
 .ruff_cache/
+# Superpowers SDD scratch
+.superpowers/
+
+# Local dev env helper
+.dev-env.sh

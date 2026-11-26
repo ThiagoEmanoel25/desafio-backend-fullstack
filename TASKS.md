@@ -4,6 +4,10 @@ Este arquivo é a fonte de verdade do trabalho do desafio. A ordem abaixo proteg
 o prazo: primeiro entregamos todo o escopo obrigatório; depois implementamos
 somente os dois diferenciais definidos neste plano.
 
+Fonte de requisitos: `README.md`. Em caso de conflito, o obrigatório do README
+vence. Os diferenciais não podem atrasar, substituir ou enfraquecer um requisito
+obrigatório.
+
 ## Contrato de escopo
 
 ### Obrigatório
@@ -53,12 +57,27 @@ requisição, nunca de argumentos produzidos pela LLM.
 - [ ] Trabalhar em branches `feature/...` pequenas.
 - [ ] Fazer commits convencionais e focados.
 - [ ] Não iniciar os diferenciais antes de todo o obrigatório estar verde.
+- [ ] Se um diferencial ficar parcial, removê-lo da entrega em vez de manter um
+      fluxo quebrado.
 - [ ] Escrever o teste de isolamento junto com cada acesso novo a dados.
 - [ ] Não chamar provedores reais nos testes automatizados.
 - [ ] Atualizar este arquivo ao concluir ou alterar uma decisão.
 
+## Ordem de prioridade da avaliação
+
+1. Backend, API e dados — 30%.
+2. Agentes de IA e contexto — 25%.
+3. Segurança e isolamento — 15%.
+4. Frontend — 15%.
+5. Qualidade, testes, logs e documentação — 15%.
+
+Os dois diferenciais só entram depois que os cinco blocos acima estiverem
+entregues e verificáveis.
+
 ## Fase 0 — Base de desenvolvimento
 
+- [x] Usar o fork público `ThiagoEmanoel25/desafio-backend-fullstack` como
+      `origin` e o repositório original como `upstream`.
 - [ ] Criar a branch `feature/project-foundation`.
 - [ ] Criar `.env` local a partir de `.env.example` sem versionar segredos.
 - [ ] Definir `TEST_DATABASE_URL` para um PostgreSQL separado.
@@ -76,9 +95,12 @@ Commit sugerido: `test: configure isolated async test database`
 ## Fase 1 — Domínio de tarefas e banco
 
 - [ ] Implementar `TaskStatus` e `TaskPriority` uma única vez e reutilizá-los.
-- [ ] Implementar `TaskCreate`, `TaskUpdate` e `TaskResponse`.
+- [ ] Implementar `TaskCreate`, `TaskUpdate` e `TaskResponse` com
+      `from_attributes=True` na resposta.
 - [ ] Aplicar limites de tamanho aos campos recebidos pela API e pela IA.
 - [ ] Implementar o model `Task` com `Mapped[...]`.
+- [ ] Incluir `title`, `description`, `status`, `priority`, `department`,
+      `user_id`, `created_at` e `updated_at`.
 - [ ] Criar FK obrigatória para `users.id` e índices úteis por usuário.
 - [ ] Garantir `created_at` e `updated_at` no banco.
 - [ ] Importar `Task` em `app/models/__init__.py`.
@@ -93,6 +115,8 @@ Commit sugerido: `feat: add task model schemas and migration`
 
 ## Fase 2 — Autenticação JWT
 
+- [ ] Implementar `RegisterRequest`, `LoginRequest` ou formulário OAuth2,
+      `TokenResponse` e `UserResponse`.
 - [ ] Implementar o repositório de usuários.
 - [ ] Implementar registro com hash bcrypt e resposta `409` para duplicidade.
 - [ ] Implementar login e emissão de JWT.
@@ -116,6 +140,10 @@ Commit sugerido: `feat: implement jwt authentication`
 - [ ] Exigir `user_id` em toda busca, atualização e exclusão.
 - [ ] Implementar `task_service` como regra compartilhada pela API e pelas tools.
 - [ ] Implementar criação, listagem, detalhe, PATCH e exclusão.
+- [ ] Suportar filtros opcionais de `status` e `priority` na listagem.
+- [ ] Aplicar `skip` e `limit` com limites seguros, sem criar uma resposta de
+      paginação além do necessário.
+- [ ] Declarar schemas de entrada e `response_model` em todas as rotas.
 - [ ] Retornar `404` para tarefa ausente ou pertencente a outro usuário.
 - [ ] Registrar criação de tarefa sem dados sensíveis.
 
@@ -134,6 +162,9 @@ Commit sugerido: `feat: implement user scoped task crud`
 - [ ] Implementar `ChatRequest` e `ChatResponse`.
 - [ ] Criar `AgentDeps` com sessão e `user_id` autenticado.
 - [ ] Escrever prompt fixo curto, sem dados dinâmicos do usuário.
+- [ ] Mapear linguagem natural para os enums, incluindo `urgente -> urgent`.
+- [ ] Pedir título ou departamento quando estiverem ausentes, sem inventar.
+- [ ] Responder no idioma usado pelo usuário.
 - [ ] Implementar `create_task_tool` com parâmetros tipados.
 - [ ] Construir `TaskCreate` dentro da tool antes de salvar.
 - [ ] Obter `user_id` exclusivamente de `ctx.deps`.
@@ -145,6 +176,8 @@ Testes:
 
 - [ ] Chat exige autenticação.
 - [ ] `TestModel` cria tarefa para o usuário atual.
+- [ ] A mensagem de referência cria “Revisar relatório financeiro” com
+      prioridade `urgent` e departamento `Comercial`.
 - [ ] A tool não aceita `user_id` fornecido pelo modelo.
 - [ ] Falha simulada do modelo retorna `503`.
 
@@ -152,13 +185,17 @@ Commit sugerido: `feat: add task creation agent`
 
 ## Fase 5 — Assistente estruturado
 
-- [ ] Implementar `TaskAssistance` com descrições e limites.
+- [ ] Implementar `TaskAssistance` com descrições e limites para `summary`,
+      `complexity`, `estimated_hours`, `suggested_priority`, `priority_reason`,
+      `steps`, `risks` e `clarifying_questions`.
 - [ ] Criar agente separado com `output_type=TaskAssistance`.
 - [ ] Buscar a tarefa pelo par `user_id + task_id`.
 - [ ] Buscar no máximo cinco tarefas abertas do mesmo usuário e departamento.
 - [ ] Excluir a própria tarefa do contexto complementar.
 - [ ] Enviar apenas título, descrição, status, prioridade e departamento.
 - [ ] Separar instruções fixas do contexto dinâmico.
+- [ ] Injetar o contexto via `@task_assistant.instructions` e
+      `RunContext[AssistantDeps]`.
 - [ ] Exigir perguntas de esclarecimento quando faltar descrição.
 - [ ] Registrar duração, sucesso, modelo e `task_id`, sem prompt completo.
 - [ ] Converter falhas da IA em `503`.
@@ -183,6 +220,8 @@ Commit sugerido: `feat: add structured task assistant`
 - [ ] Implementar chat e atualizar a lista quando ele criar uma tarefa.
 - [ ] Implementar painel de assistência com loading, resultado e erro.
 - [ ] Configurar CORS apenas para as origens permitidas.
+- [ ] Manter estado com os recursos já presentes no React; não adicionar
+      biblioteca de estado ou design sem necessidade.
 
 Critério de conclusão:
 
@@ -196,13 +235,19 @@ Commits sugeridos:
 
 ## Fase 7 — Qualidade obrigatória
 
-- [ ] Implementar logs estruturados em inglês.
+- [ ] Implementar `setup_logging()` com logs estruturados em inglês e chamá-lo
+      na inicialização de `app/main.py`.
+- [ ] Registrar pelo menos criação de tarefa e chamadas aos dois agentes.
 - [ ] Não registrar senha, JWT, e-mail, prompt completo ou descrição da tarefa.
 - [ ] Implementar seed idempotente com dois usuários e tarefas distintas.
 - [ ] Documentar as credenciais do seed.
 - [ ] Adicionar docstrings e documentação relevante ao Swagger.
 - [ ] Responder ao questionário técnico com base na implementação real.
+- [ ] Responder especificamente sobre async no FastAPI, fluxo da tool,
+      contexto enviado à LLM, origem segura do `user_id` e próximos passos.
 - [ ] Explicar no README exatamente qual contexto vai para cada agente.
+- [ ] Documentar o que ficou de fora e por quê.
+- [ ] Manter `README.en-us.md` coerente com as instruções de execução alteradas.
 - [ ] Rodar suíte completa, lint, migration e build do frontend.
 
 Critério de conclusão do obrigatório:
@@ -213,6 +258,7 @@ Critério de conclusão do obrigatório:
 - [ ] Seed pode rodar duas vezes sem duplicar dados.
 - [ ] O frontend compila.
 - [ ] O README permite executar e avaliar o projeto sem conhecimento externo.
+- [ ] O checklist obrigatório do `README.md` está completamente marcado.
 
 Commit sugerido: `chore: add logging seed and delivery documentation`
 
@@ -221,6 +267,9 @@ Commit sugerido: `chore: add logging seed and delivery documentation`
 # Diferencial 1 — Redis, cache e continuidade do chat
 
 Esta fase começa somente depois do critério de conclusão do obrigatório.
+Ela implementa apenas quatro itens opcionais do README que formam um único
+conjunto: Redis para cache da lista, cache da assistência, histórico e a tool
+`list_tasks`.
 
 ## Fase 8 — Redis resiliente
 
@@ -260,6 +309,8 @@ assist:{user_id}:{task_id}:{task_updated_at}
 - [ ] Adicionar `conversation_id` ao contrato do chat.
 - [ ] Gerar ou validar o identificador no servidor.
 - [ ] Persistir a conversa serializada pelo PydanticAI no Redis.
+- [ ] Passar a conversa recuperada ao agente sem aceitar histórico arbitrário
+      enviado pelo frontend.
 - [ ] Limitar quantidade de turnos enviados ao modelo.
 - [ ] Aplicar TTL e impedir acesso cruzado por `conversation_id`.
 - [ ] Se Redis falhar, continuar sem histórico e registrar degradação.
@@ -295,6 +346,10 @@ Commits sugeridos:
 
 # Diferencial 2 — RAG e memória derivados das tarefas
 
+Este é o único diferencial que não está enumerado no README original. Ele será
+pequeno, explicado como decisão adicional e limitado a melhorar o contexto dos
+agentes com tarefas que já pertencem ao produto.
+
 ## Invariantes
 
 - A tabela `tasks` é a fonte da verdade.
@@ -314,6 +369,7 @@ Commits sugeridos:
 - [ ] Garantir unicidade por `user_id + task_id`.
 - [ ] Remover o índice por cascade quando a tarefa for excluída.
 - [ ] Criar migration revisada manualmente.
+- [ ] Não criar endpoints de documentos, notas ou memória genérica.
 
 Campos de origem permitidos:
 
@@ -331,6 +387,8 @@ Campos de origem permitidos:
 - [ ] Não desfazer a gravação da tarefa se o embedding falhar.
 - [ ] Implementar busca lexical sempre disponível.
 - [ ] Implementar busca vetorial quando houver embedding compatível.
+- [ ] Manter o modelo de embedding configurável e registrar qual versão gerou
+      cada vetor.
 - [ ] Buscar no máximo 20 candidatos por canal.
 - [ ] Fundir rankings lexical e vetorial com RRF.
 - [ ] Preservar a origem e os scores de cada resultado.
@@ -408,6 +466,8 @@ Commits sugeridos:
 - [ ] Demonstrar que outro usuário não acessa histórico, cache ou RAG.
 - [ ] Demonstrar assistência usando tarefas abertas e concluídas relevantes.
 - [ ] Atualizar README com arquitetura, decisões, degradações e limites.
+- [ ] Incluir credenciais do seed e respostas finais do questionário.
+- [ ] Confirmar que o repositório público executa a partir de um clone limpo.
 - [ ] Confirmar que nenhum terceiro diferencial foi implementado.
 
 ## Definição de pronto

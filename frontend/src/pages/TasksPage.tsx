@@ -1,3 +1,6 @@
+import { useCallback, useEffect, useState } from 'react'
+import { ApiError } from '../api/client'
+import { listTasks } from '../api/tasks'
 import ChatPanel from '../components/ChatPanel'
 import TaskAssistantPanel from '../components/TaskAssistantPanel'
 import TaskForm from '../components/TaskForm'
@@ -8,22 +11,46 @@ interface TasksPageProps {
   onLogout: () => void
 }
 
-/**
- * Main page: task list + creation form + AI chat.
- *
- * TODO:
- * - Load the user's tasks from the API when the page opens (listTasks)
- * - Keep the tasks in state and handle loading / error states
- * - Refresh (or update) the list when:
- *     * a task is created through the form
- *     * a task is updated/deleted in the list
- *     * the AI chat creates a task (ChatResponse.created_task)
- * - If the API returns 401 (expired token), log the user out
- * - Keep the task selected for AI help in state and show TaskAssistantPanel
- */
+/** Main page: owns the task list; children report mutations and API errors back. */
 export default function TasksPage({ onLogout }: TasksPageProps) {
-  const tasks: Task[] = []
-  const assistedTask: Task | null = null
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [assistedTask, setAssistedTask] = useState<Task | null>(null)
+
+  // The single place where an expired session (401) logs the user out.
+  // Returns true when the error was a 401 and has been handled.
+  const handleApiError = useCallback(
+    (err: unknown): boolean => {
+      if (err instanceof ApiError && err.status === 401) {
+        onLogout()
+        return true
+      }
+      return false
+    },
+    [onLogout],
+  )
+
+  const refresh = useCallback(async () => {
+    try {
+      setTasks(await listTasks())
+      setError(null)
+    } catch (err) {
+      if (!handleApiError(err)) setError('Não foi possível carregar as tarefas.')
+    } finally {
+      setLoading(false)
+    }
+  }, [handleApiError])
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- initial fetch; state is set after await
+    void refresh()
+  }, [refresh])
+
+  function retry() {
+    setLoading(true)
+    void refresh()
+  }
 
   return (
     <main className="container">
@@ -34,14 +61,35 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
 
       <div className="grid">
         <section className="stack">
-          <TaskForm onCreated={() => {}} />
-          <TaskList tasks={tasks} onChanged={() => {}} onAssist={() => {}} />
+          <TaskForm onCreated={() => void refresh()} onApiError={handleApiError} />
+          {loading ? (
+            <p className="muted">Carregando tarefas…</p>
+          ) : error ? (
+            <div className="card stack">
+              <p className="error">{error}</p>
+              <button onClick={retry}>Tentar novamente</button>
+            </div>
+          ) : (
+            <TaskList
+              tasks={tasks}
+              onChanged={() => void refresh()}
+              onAssist={setAssistedTask}
+              onApiError={handleApiError}
+            />
+          )}
         </section>
 
-        <ChatPanel onTaskCreated={() => {}} />
+        <ChatPanel onTaskCreated={() => void refresh()} onApiError={handleApiError} />
       </div>
 
-      {assistedTask && <TaskAssistantPanel task={assistedTask} onClose={() => {}} />}
+      {assistedTask && (
+        <TaskAssistantPanel
+          key={assistedTask.id}
+          task={assistedTask}
+          onClose={() => setAssistedTask(null)}
+          onApiError={handleApiError}
+        />
+      )}
     </main>
   )
 }

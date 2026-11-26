@@ -20,6 +20,19 @@ export const tokenStorage = {
   clear: (): void => localStorage.removeItem(TOKEN_KEY),
 }
 
+// FastAPI sends a string `detail` for HTTPException and an array of
+// {loc, msg} for 422 validation errors; flatten the array to "field: msg; ...".
+function errorMessage(body: unknown, fallback: string): string {
+  const detail = (body as { detail?: unknown } | null)?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((d: { loc?: unknown[]; msg?: string }) => `${(d.loc ?? []).slice(1).join('.')}: ${d.msg}`)
+      .join('; ')
+  }
+  return fallback
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers)
   const token = tokenStorage.get()
@@ -33,8 +46,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    const detail = typeof body?.detail === 'string' ? body.detail : response.statusText
-    throw new ApiError(response.status, detail)
+    throw new ApiError(response.status, errorMessage(body, response.statusText))
   }
 
   if (response.status === 204) return undefined as T

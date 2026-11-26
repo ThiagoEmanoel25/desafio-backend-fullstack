@@ -1,22 +1,91 @@
-import type { Task } from '../types'
+import { useState, type FormEvent } from 'react'
+import { ApiError } from '../api/client'
+import { createTask } from '../api/tasks'
+import type { Task, TaskPriority } from '../types'
 
 interface TaskFormProps {
   onCreated: (task: Task) => void
+  onApiError: (err: unknown) => boolean
 }
 
-/**
- * TODO: form to create a task.
- * - Fields: title, description (optional), priority (select), department
- * - Call createTask() on submit, then onCreated(task) and clear the form
- * - Show validation errors returned by the API (422)
- */
-export default function TaskForm({ onCreated }: TaskFormProps) {
-  void onCreated
+export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [priority, setPriority] = useState<TaskPriority>('medium')
+  const [department, setDepartment] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setSubmitting(true)
+    try {
+      const task = await createTask({
+        title,
+        description: description || null,
+        priority,
+        department,
+      })
+      setTitle('')
+      setDescription('')
+      setPriority('medium')
+      setDepartment('')
+      onCreated(task)
+    } catch (err) {
+      if (onApiError(err)) return
+      setError(
+        err instanceof ApiError && err.status === 422
+          ? `Verifique os campos — ${err.message}`
+          : 'Não foi possível criar a tarefa.',
+      )
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <section className="card">
       <h2>Nova tarefa</h2>
-      <p className="muted">TODO: implementar formulário.</p>
+      <form onSubmit={handleSubmit} className="stack">
+        <input
+          aria-label="Título"
+          placeholder="Título"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          minLength={3}
+        />
+        <textarea
+          aria-label="Descrição"
+          placeholder="Descrição (opcional)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        <div className="row">
+          <select
+            aria-label="Prioridade"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+          >
+            <option value="low">Baixa</option>
+            <option value="medium">Média</option>
+            <option value="high">Alta</option>
+            <option value="urgent">Urgente</option>
+          </select>
+          <input
+            aria-label="Departamento"
+            placeholder="Departamento"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            required
+          />
+        </div>
+        {error && <p className="error">{error}</p>}
+        <button type="submit" disabled={submitting}>
+          {submitting ? 'Criando…' : 'Criar tarefa'}
+        </button>
+      </form>
     </section>
   )
 }

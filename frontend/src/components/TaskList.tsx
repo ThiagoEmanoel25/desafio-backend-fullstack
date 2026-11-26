@@ -1,29 +1,87 @@
-import type { Task } from '../types'
+import { useState } from 'react'
+import { deleteTask, updateTask } from '../api/tasks'
+import type { Task, TaskStatus } from '../types'
 
 interface TaskListProps {
   tasks: Task[]
   onChanged: () => void
   onAssist: (task: Task) => void
+  onApiError: (err: unknown) => boolean
 }
 
-/**
- * TODO: render the user's tasks.
- * - Show title, priority, status and department
- * - Allow changing the status (e.g. a select or a "concluir" button) -> updateTask()
- * - Allow deleting a task -> deleteTask()
- * - Call onChanged() after any change so the page can refresh the list
- * - A "Pedir ajuda à IA" button on each task -> onAssist(task)
- * - Show an empty state when there are no tasks
- * - (Optional) filters by status/priority
- */
-export default function TaskList({ tasks, onChanged, onAssist }: TaskListProps) {
-  void onChanged
-  void onAssist
+const PRIORITY_LABEL = { low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente' }
+const STATUS_LABEL: Record<TaskStatus, string> = {
+  pending: 'Pendente',
+  in_progress: 'Em andamento',
+  completed: 'Concluída',
+}
+
+export default function TaskList({ tasks, onChanged, onAssist, onApiError }: TaskListProps) {
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function mutate(id: string, action: () => Promise<unknown>) {
+    if (busyId) return
+    setBusyId(id)
+    setError(null)
+    try {
+      await action()
+      onChanged()
+    } catch (err) {
+      if (!onApiError(err)) setError('Não foi possível atualizar a tarefa.')
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   return (
-    <section className="card">
+    <section className="card stack">
       <h2>Tarefas ({tasks.length})</h2>
-      <p className="muted">TODO: implementar listagem.</p>
+      {error && <p className="error">{error}</p>}
+      {tasks.length === 0 && <p className="muted">Nenhuma tarefa ainda.</p>}
+      <ul className="task-list">
+        {tasks.map((task) => {
+          const busy = busyId === task.id
+          return (
+            <li key={task.id} className="task">
+              <div>
+                <strong>{task.title}</strong>
+                <div className="muted">
+                  {task.department} · {PRIORITY_LABEL[task.priority]}
+                </div>
+              </div>
+              <div className="row">
+                <select
+                  aria-label={`Status de ${task.title}`}
+                  value={task.status}
+                  disabled={busy}
+                  onChange={(e) =>
+                    void mutate(task.id, () =>
+                      updateTask(task.id, { status: e.target.value as TaskStatus }),
+                    )
+                  }
+                >
+                  {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <button disabled={busy} onClick={() => onAssist(task)}>
+                  Pedir ajuda à IA
+                </button>
+                <button
+                  className="danger"
+                  disabled={busy}
+                  onClick={() => void mutate(task.id, () => deleteTask(task.id))}
+                >
+                  Excluir
+                </button>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
     </section>
   )
 }

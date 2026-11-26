@@ -1,29 +1,31 @@
 import { useState, type FormEvent } from 'react'
 import { login } from '../api/auth'
+import { ApiError } from '../api/client'
 
 interface LoginPageProps {
   onLogin: () => void
 }
 
-/**
- * TODO:
- * - Call login(email, password) on submit
- * - Show a loading state while the request is in progress
- * - Show an error message on invalid credentials (ApiError with status 401)
- * - Call onLogin() on success
- */
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setError(null)
+    setLoading(true)
     try {
       await login(email, password)
       onLogin()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error')
+      setError(
+        err instanceof ApiError && err.status === 401
+          ? 'E-mail ou senha inválidos'
+          : 'Não foi possível entrar. Tente novamente.',
+      )
+      setLoading(false)
     }
   }
 
@@ -33,6 +35,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       <form onSubmit={handleSubmit} className="stack">
         <input
           type="email"
+          aria-label="E-mail"
           placeholder="E-mail"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -40,13 +43,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         />
         <input
           type="password"
+          aria-label="Senha"
           placeholder="Senha"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         {error && <p className="error">{error}</p>}
-        <button type="submit">Entrar</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Entrando…' : 'Entrar'}
+        </button>
       </form>
     </main>
   )

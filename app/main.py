@@ -1,6 +1,7 @@
 """FastAPI application entrypoint."""
 
 from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.agent.deps import AssistantUnavailableError, ChatUnavailableError
@@ -17,9 +18,13 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# TODO: add CORSMiddleware so the React frontend can call this API.
-# Allowed origins are available in `settings.cors_origins_list`.
-# Docs: https://fastapi.tiangolo.com/tutorial/cors/
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 app.include_router(api_v1_router)
 

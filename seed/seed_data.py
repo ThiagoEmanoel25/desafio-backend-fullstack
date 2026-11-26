@@ -158,7 +158,7 @@ async def main() -> None:
             await _seed_user(db, spec)
         await db.commit()
     await engine.dispose()
-    print(f"Done. Password for every seeded user: {PASSWORD}")
+    print("Done. The credentials are in README.md.")
 
 
 if __name__ == "__main__":

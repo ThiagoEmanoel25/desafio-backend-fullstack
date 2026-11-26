@@ -38,6 +38,8 @@ Para você focar no que importa, o repositório já traz:
 
 Cada arquivo que você precisa completar tem um comentário no topo com **"You should implement here"** explicando o que é esperado.
 
+> **Nota:** esta seção e a de **Escopo do Desafio** abaixo são o enunciado original, escrito para quem ia implementar o desafio. Elas falam de `TODO`s e dos comentários "You should implement here" que **não existem mais** no código: tudo o que era obrigatório foi implementado. O que foi entregue de fato está descrito em [Como Executar](#como-executar), [Como rodar os testes](#como-rodar-os-testes), [Contexto enviado a cada agente](#contexto-enviado-a-cada-agente), [Decisões e o que ficou de fora](#decisões-e-o-que-ficou-de-fora) e [Estrutura do Projeto](#estrutura-do-projeto).
+
 ## Escopo do Desafio
 
 ### Parte 1: Autenticação e CRUD de Tarefas (obrigatório)
@@ -101,7 +103,7 @@ Além de criar tarefas, a IA deve **ajudar o usuário a executá-las**. Nesta pa
 
 ### Parte 4: Frontend React (obrigatório)
 
-O esqueleto já está em [frontend/](frontend/). Complete os pontos marcados com `TODO`:
+O esqueleto já está em [frontend/](frontend/). Complete os pontos marcados com `TODO` *(todos os seis itens abaixo estão implementados)*:
 
 1. **Tela de login** que salva o token e mostra os erros.
 2. **Lista de tarefas** do usuário, com estados de carregando, vazio e erro.
@@ -110,7 +112,7 @@ O esqueleto já está em [frontend/](frontend/). Complete os pontos marcados com
 5. **Painel de chat** com o agente de IA. Quando o agente criar uma tarefa, a lista deve ser atualizada.
 6. Botão **"Pedir ajuda à IA"** em cada tarefa, abrindo o painel [TaskAssistantPanel](frontend/src/components/TaskAssistantPanel.tsx) com a avaliação e o plano de execução.
 
-No backend, configure o **CORSMiddleware** para que o frontend consiga chamar a API (veja o `TODO` em [app/main.py](app/main.py)).
+No backend, configure o **CORSMiddleware** para que o frontend consiga chamar a API. *(Feito: o `CORSMiddleware` está em [app/main.py](app/main.py), com as origens vindas de `settings.cors_origins_list` — nunca `"*"`.)*
 
 Não avaliamos design. Avaliamos **consumo da API, gerenciamento de estado e organização dos componentes**. Pode usar qualquer biblioteca (Tailwind, MUI, React Query etc.). Se preferir **Next.js**, pode substituir a pasta `frontend/`, desde que o projeto continue rodando pelo Docker Compose.
 
@@ -287,7 +289,7 @@ O seed é **idempotente**: ele procura o usuário pelo e-mail e a tarefa por `(u
 
 ```bash
 # 1. Suba apenas o banco (fica exposto em localhost:5433)
-docker compose up db -d
+docker compose up db -d --wait
 
 # 2. Crie o banco de testes (uma vez só)
 docker compose exec db createdb -U app desafio_test

@@ -32,7 +32,8 @@ def _test_database_url() -> str:
     if not settings.TEST_DATABASE_URL:
         pytest.exit(
             "TEST_DATABASE_URL is not set. Point it at a separate Postgres "
-            "database (e.g. run `source .dev-env.sh`).",
+            "database, e.g. export TEST_DATABASE_URL="
+            "postgresql+asyncpg://app:app@localhost:5433/desafio_test",
             returncode=2,
         )
     if settings.TEST_DATABASE_URL == settings.DATABASE_URL:

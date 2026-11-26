@@ -38,6 +38,8 @@ So you can focus on what matters, the repository already includes:
 
 Every file you need to complete has a header comment saying **"You should implement here"** that explains what is expected.
 
+> **Note:** this section and **Challenge Scope** below are the original brief, written for whoever was going to implement the challenge. They mention `TODO`s and "You should implement here" comments that **no longer exist** in the code: everything required has been implemented. What was actually delivered is described in [How to Run](#how-to-run), [Running the tests](#running-the-tests) and [Project Structure](#project-structure), and the questionnaire is answered in the Portuguese [README.md](README.md).
+
 ## Challenge Scope
 
 ### Part 1: Authentication and Task CRUD (required)
@@ -101,7 +103,7 @@ Besides creating tasks, the AI must **help the user execute them**. In this part
 
 ### Part 4: React Frontend (required)
 
-The skeleton is in [frontend/](frontend/). Complete the parts marked with `TODO`:
+The skeleton is in [frontend/](frontend/). Complete the parts marked with `TODO` *(all six items below are implemented)*:
 
 1. A **login page** that stores the token and shows errors.
 2. The user's **task list**, with loading, empty and error states.
@@ -110,7 +112,7 @@ The skeleton is in [frontend/](frontend/). Complete the parts marked with `TODO`
 5. A **chat panel** with the AI agent. When the agent creates a task, the list must be refreshed.
 6. An **"Ask AI for help"** button on each task, opening the [TaskAssistantPanel](frontend/src/components/TaskAssistantPanel.tsx) with the evaluation and the execution plan.
 
-On the backend, configure **CORSMiddleware** so the frontend can call the API (see the `TODO` in [app/main.py](app/main.py)).
+On the backend, configure **CORSMiddleware** so the frontend can call the API. *(Done: it is in [app/main.py](app/main.py), with the origins coming from `settings.cors_origins_list` — never `"*"`.)*
 
 We do not evaluate visual design. We evaluate **API consumption, state management and component organization**. Any library is welcome (Tailwind, MUI, React Query, etc.). If you prefer **Next.js**, you may replace the `frontend/` folder, as long as the project still runs with Docker Compose.
 
@@ -241,7 +243,7 @@ by e-mail and tasks by `(user_id, title)`, so running it twice duplicates nothin
 
 ```bash
 # 1. Start only the database (exposed on localhost:5433)
-docker compose up db -d
+docker compose up db -d --wait
 
 # 2. Create the test database (once)
 docker compose exec db createdb -U app desafio_test
@@ -296,30 +298,35 @@ npm run dev                        # http://localhost:5173
 
 ```
 app/
-├── main.py                  # FastAPI entrypoint (TODO: CORS and logging)
-├── config.py                # ✅ Settings (pydantic-settings)
+├── main.py                  # FastAPI entrypoint: setup_logging, CORS, 404/503 handlers
+├── config.py                # Settings (pydantic-settings)
 ├── api/
-│   ├── deps.py              # ✅ get_db · TODO: get_current_user
+│   ├── deps.py              # get_db · get_current_user (uniform 401)
 │   └── v1/
-│       ├── router.py        # ✅ Route aggregator
-│       └── endpoints/       # TODO: auth, tasks, chat
+│       ├── router.py        # Route aggregator (/v1 prefix)
+│       └── endpoints/       # auth.py · tasks.py · chat.py
 ├── core/
-│   ├── database.py          # ✅ AsyncEngine and session factory
-│   ├── security.py          # ✅ JWT and password hashing
-│   └── logging.py           # TODO: structured logs
-├── models/                  # ✅ User · TODO: Task
-├── schemas/                 # TODO: Pydantic schemas
-├── repositories/            # TODO: data access
-├── services/                # TODO: business rules
-└── agent/                   # TODO: chat agent, task assistant, tools and prompts
+│   ├── database.py          # AsyncEngine and session factory
+│   ├── security.py          # JWT and password hashing (bcrypt)
+│   └── logging.py           # setup_logging() + JsonFormatter
+├── models/                  # User · Task (SQLAlchemy 2.0, Mapped[...])
+├── schemas/                 # auth · task · chat · assistance (Pydantic v2)
+├── repositories/            # Queries, always scoped by user_id
+├── services/                # task_service · task_assistant_service
+└── agent/
+    ├── agent.py             # Chat agent (create_task tool)
+    ├── task_assistant.py    # Assistant, output_type=TaskAssistance
+    ├── tools.py             # create_task_tool (user_id comes from ctx.deps)
+    ├── prompts.py           # Static prompts of both agents
+    └── deps.py              # AgentDeps · AssistantDeps · 503 exceptions
 frontend/
 └── src/
-    ├── api/                 # ✅ client.ts · TODO: auth, tasks, chat
-    ├── pages/               # Login and Tasks
+    ├── api/                 # client.ts (ApiError) · auth · tasks · chat
+    ├── pages/               # LoginPage · TasksPage (single 401 logout seam)
     ├── components/          # TaskForm, TaskList, ChatPanel, TaskAssistantPanel
     └── types.ts             # Types mirroring the API schemas
-tests/                       # ✅ conftest + example · TODO: remaining tests
-seed/                        # TODO: initial data
+tests/                       # conftest + auth, tasks, isolation, chat, assistant, logging
+seed/                        # seed_data.py (idempotent, 2 users)
 ```
 
 ## Submission

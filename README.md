@@ -347,6 +347,10 @@ O banco `desafio_test` precisa existir (`docker compose exec db createdb -U app 
 - `retrieve_related_tasks` ([app/services/task_retrieval.py](app/services/task_retrieval.py)) filtra por `user_id` no SQL e combina dois canais com RRF (k=60), até 20 candidatos cada: full-text do Postgres (`to_tsvector('simple', ...)` + `ts_rank`, índice GIN, sempre disponível) e similaridade de cosseno sobre os embeddings do mesmo modelo. Cada resultado guarda a origem (`lexical`, `vector`, `both`) e os scores.
 - **Sem pgvector**: o vetor fica em `ARRAY(float)` e o cosseno é calculado em Python sobre as tarefas do usuário. Serve para a escala do desafio, não para corpora grandes.
 - Configuração: `EMBEDDING_MODEL` (qualquer modelo de embedding do PydanticAI, ex. `openai:text-embedding-3-small`). Vazio ou `none` (padrão) = só busca lexical, sem chave. Cada linha registra o modelo que gerou o vetor. Para indexar tarefas existentes, rode o seed (idempotente).
+- **Re-ranking.** `retrieve_and_rerank` pega até 20 candidatos do RRF, reordena e entrega no máximo 5: `rerank_score = rrf/rrf_max + 0,15·mesmo departamento + 0,10·recência + 0,05·mesma prioridade`, com `recência = 1/(1 + dias desde updated_at/30)`. O RRF domina; o resto só desempata. O `rerank_score` é um campo próprio, os scores de cada canal ficam intactos. Se o reranker falhar, vale a ordem RRF (log `rerank_failed`).
+- **Memória episódica.** Tarefas concluídas similares entram no assistente como "como trabalho parecido foi feito antes"; tarefas abertas, como contexto atual (ver abaixo).
+- **Tool `search_task_memory`** (chat): somente leitura, `query` até 200 caracteres, `status` opcional, `limit` até 5; devolve `task_id`, `title`, `status`, `priority`, `department` e até 160 caracteres da descrição. Sem `user_id` no schema (argumento extra é rejeitado).
+- **Avaliação** ([docs/retrieval-eval.md](docs/retrieval-eval.md)): 12 consultas sobre 18 tarefas de dois usuários (`tests/data/retrieval_eval.json`), embedder falso determinístico. RRF: Recall@5 1,000 e MRR@5 1,000; com re-ranking: Recall@5 1,000 e MRR@5 1,000. O conjunto é pequeno e já satura, então o número prova que o re-ranking não piora, não que melhora. O teste falha se o Recall@5 cair ou se embedding/reranker degradarem durante a medição.
 
 ## Contexto enviado a cada agente
 
@@ -357,11 +361,11 @@ São **dois agentes separados**, com prompts, deps e responsabilidades diferente
 | | |
 |---|---|
 | **Vai no prompt** | o prompt fixo ([app/agent/prompts.py](app/agent/prompts.py), `SYSTEM_PROMPT`: papel, quando usar cada tool, mapa de prioridade em português, "não invente título nem departamento"), o **histórico da conversa** lido do Redis (no máximo `CHAT_HISTORY_MAX_MESSAGES`, padrão 20 mensagens, cortado sempre num turno do usuário para não separar tool call de tool return) e a mensagem nova |
-| **Fica de fora** | qualquer histórico enviado pelo cliente (o contrato só aceita `conversation_id`), dados de outro usuário, e-mail, hash de senha; tarefas só entram se o modelo chamar `list_tasks` |
+| **Fica de fora** | qualquer histórico enviado pelo cliente (o contrato só aceita `conversation_id`), dados de outro usuário, e-mail, hash de senha; tarefas só entram se o modelo chamar `list_tasks` ou `search_task_memory` |
 | **`user_id`** | `AgentDeps.user_id`, lido pelas tools como `ctx.deps.user_id`; nenhuma tool **tem** parâmetro `user_id` |
 | **Limites** | `UsageLimits(request_limit=5, tool_calls_limit=3)`; `list_tasks` devolve no máximo 10 tarefas (só `id`, `title`, `status`, `priority`, `department`, filtros `status`/`priority`); qualquer falha vira 503 (ou evento `error` no stream) com detalhe fixo |
 
-Tools: `create_task_tool` (escreve) e `list_tasks` (lê pelo mesmo `task_service` da API). Elas rodam em sequência, porque dividem uma `AsyncSession`.
+Tools: `create_task_tool` (escreve), `list_tasks` (lê pelo mesmo `task_service` da API) e `search_task_memory` (busca por assunto nas tarefas do usuário, no máximo 5, para trabalho passado ou parecido). Elas rodam em sequência, porque dividem uma `AsyncSession`.
 
 **Histórico.** O `conversation_id` (UUID) é opcional na requisição; se faltar, o servidor gera um e o devolve. A conversa serializada pelo PydanticAI (`ModelMessagesTypeAdapter`) fica **só no Redis**, em `chat:{user_id}:{conversation_id}`, com TTL `CHAT_HISTORY_TTL_SECONDS` (padrão 24 h). Como o `user_id` vem do JWT, o `conversation_id` de outro usuário não encontra nada e vira conversa nova. Redis fora do ar: a conversa segue sem histórico e o log registra `cache_degraded`. Mensagens e respostas nunca vão para o Postgres.
 
@@ -380,12 +384,12 @@ Usa `agent.run_stream_events` (entrega texto incremental mesmo com tool call no 
 
 | | |
 |---|---|
-| **Vai no prompt** | o prompt fixo (`TASK_ASSISTANT_PROMPT`) e, por instruções dinâmicas, a tarefa em análise — título, descrição (ou "não informada"), departamento dentro de um bloco `<task>`, mais status e prioridade — e **até 5** outras tarefas abertas do mesmo usuário e do mesmo departamento, cada uma reduzida a **título, status e prioridade** |
-| **Fica de fora** | descrição das tarefas relacionadas, ids, `user_id`, timestamps, hash de senha, e-mail, tarefas concluídas, outros departamentos e qualquer dado de outro usuário |
-| **`user_id`** | a tarefa é carregada por `(user_id, task_id)` e as relacionadas filtradas por `user_id` **no SQL**, antes de qualquer chamada ao modelo; tarefa de outro usuário é 404 e o modelo nunca é chamado |
-| **Anti-injeção** | `<` e `>` são substituídos nos campos de texto livre, então uma tarefa não consegue fechar o bloco `<task>` nem forjar um `<related_tasks>`; o prompt declara que o conteúdo dos blocos é **dado**, nunca instrução |
+| **Vai no prompt** | o prompt fixo (`TASK_ASSISTANT_PROMPT`) e, por instruções dinâmicas, a tarefa em análise — título, descrição (ou "não informada"), departamento dentro de um bloco `<task>`, mais status e prioridade — e dois conjuntos separados: `<related_tasks>`, **até 5** tarefas abertas relevantes (contexto atual), e `<completed_tasks>`, **até 5** concluídas similares (memória episódica). Cada item é `[task_id] título \| status \| prioridade \| departamento` |
+| **Fica de fora** | descrição das tarefas relacionadas, id da própria tarefa, `user_id`, timestamps, hash de senha, e-mail e qualquer dado de outro usuário |
+| **`user_id`** | a tarefa é carregada por `(user_id, task_id)` antes de qualquer chamada ao modelo (tarefa de outro usuário é 404 e o modelo nunca é chamado); os dois conjuntos vêm de `retrieve_and_rerank`, filtrado por `user_id` **no SQL**, com a própria tarefa excluída |
+| **Anti-injeção** | `<` e `>` são substituídos nos campos de texto livre, então uma tarefa não consegue fechar nem forjar nenhum bloco; o prompt declara que o conteúdo dos blocos é **dado**, nunca instrução |
 
-O corte de 5 e todos os filtros estão na própria query (`task_repository.list_open_in_department`), não em Python: o banco não devolve nada que não vá para o prompt.
+A query de busca é título + descrição + departamento da tarefa. Se a recuperação falhar (ou não achar nenhuma aberta, como em tarefas ainda sem índice), as abertas voltam a ser as do mesmo departamento (`list_related_open_tasks`) e as concluídas ficam vazias; o assistente não quebra. O cache da assistência usa `assist:{user_id}:{task_id}:{updated_at}:{versão da lista}`: como o contexto depende das outras tarefas, qualquer escrita do usuário (que já incrementa `tasks:version:{user_id}`) invalida a assistência; sem Redis, o cache é pulado.
 
 ## Decisões e o que ficou de fora
 
@@ -402,13 +406,14 @@ O corte de 5 e todos os filtros estão na própria query (`task_repository.list_
 
 **O que ficou de fora**
 
-- **Diferenciais não implementados:** Redis (cache da listagem e da avaliação), histórico de conversa (`message_history`), tool `list_tasks`, `BackgroundTasks` para log de auditoria, cache da assistência e recuperação sobre as tarefas do usuário. Os dois primeiros blocos estão descritos na resposta 5 do questionário como próximo passo.
+- **Diferencial não implementado:** `BackgroundTasks` para log de auditoria. Redis (cache, histórico, `list_tasks`) e RAG sobre as tarefas (busca híbrida, re-ranking, memória episódica, `search_task_memory`) foram feitos.
+- **RAG limitado de propósito:** só tarefas do próprio usuário; sem documentos, sem pgvector (cosseno em Python) e sem reranker por modelo (a fórmula é fixa e explicável). A avaliação é pequena e não prova ganho do re-ranking, só que ele não piora o Recall@5.
 - **Testes de frontend** (Vitest/Testing Library) e **CI**: a garantia do frontend hoje é `tsc -b` + `vite build` + `oxlint`.
 - **Sem React Query e sem gerenciador de estado:** React 19 puro, sem router. São duas telas; o estado cabe em `useState` e em um único ponto, em `TasksPage`, que desloga quando a API responde 401.
 - **Refresh token, recuperação de senha, verificação de e-mail e rate limiting** não existem: só access token com expiração (`JWT_EXPIRATION_MINUTES`).
 - **Sem `updated_at` manual, sem soft delete, sem auditoria:** `DELETE` apaga a linha.
 - **Sem organizações/times/RBAC:** o isolamento é por usuário, com `user_id`. Não existe `tenant_id`.
-- **O assistente não persiste nada:** a avaliação é recalculada a cada chamada (daí o cache ser o item 1 dos próximos passos).
+- **O assistente não persiste nada no banco:** a avaliação fica só no cache Redis, e mensagens ou respostas da IA nunca entram no índice de busca.
 
 ## Estrutura do Projeto
 

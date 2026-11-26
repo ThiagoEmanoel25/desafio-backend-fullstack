@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "note": "Small retrieval eval set. Keys are stable; UUIDs are created at run time. 'relevant' lists the tasks a good top-5 should contain.",
+  "tasks": [
+    {"key": "a-fin-close-q2", "user": "a", "title": "Fechar balanço do segundo trimestre", "description": "Conciliar contas e enviar balanço para a diretoria", "department": "Financeiro", "priority": "high", "status": "completed"},
+    {"key": "a-fin-close-q3", "user": "a", "title": "Fechar balanço do terceiro trimestre", "description": "Conciliar contas a pagar e receber", "department": "Financeiro", "priority": "high", "status": "pending"},
+    {"key": "a-fin-tax", "user": "a", "title": "Pagar impostos do mês", "description": "Guias de imposto e conferência de notas fiscais", "department": "Financeiro", "priority": "urgent", "status": "pending"},
+    {"key": "a-fin-tax-old", "user": "a", "title": "Pagar impostos de março", "description": "Guias de imposto emitidas e pagas", "department": "Financeiro", "priority": "urgent", "status": "completed"},
+    {"key": "a-eng-deploy-api", "user": "a", "title": "Deploy da API de pagamentos", "description": "Publicar nova versão da API em produção", "department": "Engenharia", "priority": "high", "status": "in_progress"},
+    {"key": "a-eng-deploy-old", "user": "a", "title": "Deploy do frontend", "description": "Publicar versão do frontend com rollback testado", "department": "Engenharia", "priority": "medium", "status": "completed"},
+    {"key": "a-eng-login-bug", "user": "a", "title": "Corrigir bug de login", "description": "Usuários não conseguem entrar com senha expirada", "department": "Engenharia", "priority": "urgent", "status": "pending"},
+    {"key": "a-eng-login-old", "user": "a", "title": "Corrigir login com Google", "description": "Erro no retorno do OAuth do login", "department": "Engenharia", "priority": "high", "status": "completed"},
+    {"key": "a-com-acme", "user": "a", "title": "Proposta comercial para cliente Acme", "description": "Montar proposta de contrato anual", "department": "Comercial", "priority": "high", "status": "pending"},
+    {"key": "a-com-acme-old", "user": "a", "title": "Renovar contrato do cliente Acme", "description": "Renovação do contrato anual assinada", "department": "Comercial", "priority": "medium", "status": "completed"},
+    {"key": "a-com-report", "user": "a", "title": "Relatório de vendas do trimestre", "description": "Consolidar vendas por região", "department": "Comercial", "priority": "medium", "status": "pending"},
+    {"key": "a-fin-report", "user": "a", "title": "Relatório financeiro do trimestre", "description": "Consolidar receitas e despesas", "department": "Financeiro", "priority": "medium", "status": "pending"},
+    {"key": "a-rh-onboarding", "user": "a", "title": "Onboarding de novos funcionários", "description": "Preparar acessos e treinamento", "department": "RH", "priority": "low", "status": "pending"},
+    {"key": "a-rh-onboarding-old", "user": "a", "title": "Onboarding da turma de estagiários", "description": "Acessos e treinamento entregues", "department": "RH", "priority": "low", "status": "completed"},
+    {"key": "b-fin-close", "user": "b", "title": "Fechar balanço do terceiro trimestre", "description": "Conciliar contas a pagar e receber", "department": "Financeiro", "priority": "high", "status": "pending"},
+    {"key": "b-eng-deploy", "user": "b", "title": "Deploy da API de pagamentos", "description": "Publicar nova versão da API em produção", "department": "Engenharia", "priority": "high", "status": "completed"},
+    {"key": "b-com-acme", "user": "b", "title": "Proposta comercial para cliente Acme", "description": "Montar proposta de contrato anual", "department": "Comercial", "priority": "high", "status": "pending"},
+    {"key": "b-eng-login", "user": "b", "title": "Corrigir bug de login", "description": "Senha expirada bloqueia o acesso", "department": "Engenharia", "priority": "urgent", "status": "pending"}
+  ],
+  "queries": [
+    {"user": "a", "query": "fechar balanço conciliar contas", "department": "Financeiro", "priority": "high", "relevant": ["a-fin-close-q2", "a-fin-close-q3"]},
+    {"user": "a", "query": "balanço trimestre", "department": "Financeiro", "priority": "high", "statuses": ["completed"], "relevant": ["a-fin-close-q2"]},
+    {"user": "a", "query": "pagar impostos guias", "department": "Financeiro", "priority": "urgent", "relevant": ["a-fin-tax", "a-fin-tax-old"]},
+    {"user": "a", "query": "deploy publicar versão produção", "department": "Engenharia", "priority": "high", "relevant": ["a-eng-deploy-api", "a-eng-deploy-old"]},
+    {"user": "a", "query": "corrigir login senha", "department": "Engenharia", "priority": "urgent", "relevant": ["a-eng-login-bug", "a-eng-login-old"]},
+    {"user": "a", "query": "login", "department": "Engenharia", "priority": "high", "statuses": ["completed"], "relevant": ["a-eng-login-old"]},
+    {"user": "a", "query": "cliente Acme contrato", "department": "Comercial", "priority": "high", "relevant": ["a-com-acme", "a-com-acme-old"]},
+    {"user": "a", "query": "relatório do trimestre", "department": "Financeiro", "priority": "medium", "statuses": ["pending", "in_progress"], "relevant": ["a-fin-report", "a-com-report"]},
+    {"user": "a", "query": "onboarding acessos treinamento", "department": "RH", "priority": "low", "relevant": ["a-rh-onboarding", "a-rh-onboarding-old"]},
+    {"user": "a", "query": "consolidar trimestre", "department": "Comercial", "priority": "medium", "relevant": ["a-com-report"]},
+    {"user": "b", "query": "deploy API pagamentos", "department": "Engenharia", "priority": "high", "relevant": ["b-eng-deploy"]},
+    {"user": "b", "query": "proposta Acme", "department": "Comercial", "priority": "high", "relevant": ["b-com-acme"]}
+  ]
+}

@@ -72,15 +72,22 @@ def _version_key(user_id: uuid.UUID) -> str:
     return f"tasks:version:{user_id}"
 
 
-async def task_list_key(user_id: uuid.UUID, **filters: object) -> str | None:
-    """Build `tasks:list:{user_id}:{version}:{filters_hash}`; None if unavailable."""
+async def task_list_version(user_id: uuid.UUID) -> str | None:
+    """The user's task list version (bumped on every task write); None if down."""
     client = get_redis()
     if client is None:
         return None
     try:
-        version = await client.get(_version_key(user_id)) or "0"
+        return await client.get(_version_key(user_id)) or "0"
     except Exception as exc:
         _degraded("get_version", exc)
+        return None
+
+
+async def task_list_key(user_id: uuid.UUID, **filters: object) -> str | None:
+    """Build `tasks:list:{user_id}:{version}:{filters_hash}`; None if unavailable."""
+    version = await task_list_version(user_id)
+    if version is None:
         return None
     raw = json.dumps(filters, sort_keys=True, default=str)
     filters_hash = hashlib.sha256(raw.encode()).hexdigest()[:16]

@@ -16,7 +16,7 @@ from app.schemas.task import (
     TaskPriority,
     TaskStatus,
 )
-from app.services import task_service
+from app.services import task_retrieval, task_service
 
 
 async def create_task_tool(
@@ -90,4 +90,45 @@ async def list_tasks(
             "department": t.department,
         }
         for t in tasks
+    ]
+
+
+MEMORY_QUERY_MAX = 200
+MEMORY_LIMIT_MAX = 5
+MEMORY_SNIPPET_MAX = 160
+
+
+async def search_task_memory(
+    ctx: RunContext[AgentDeps],
+    query: Annotated[str, Field(min_length=2, max_length=MEMORY_QUERY_MAX)],
+    status: TaskStatus | None = None,
+    limit: Annotated[int, Field(ge=1, le=MEMORY_LIMIT_MAX)] = MEMORY_LIMIT_MAX,
+) -> list[dict]:
+    """Search the current user's own tasks by topic (read only, at most 5).
+
+    Use it for past or similar work; status=completed finds finished tasks.
+
+    Args:
+        query: What to look for, up to 200 characters.
+        status: Optional filter: pending, in_progress or completed.
+        limit: How many tasks to return, 1 to 5.
+    """
+    results = await task_retrieval.retrieve_and_rerank(
+        ctx.deps.db,
+        ctx.deps.user_id,
+        query[:MEMORY_QUERY_MAX],
+        statuses=[status] if status else None,
+        limit=min(limit, MEMORY_LIMIT_MAX),
+    )
+    return [
+        {
+            "task_id": str(t.id),
+            "title": t.title,
+            "status": t.status,
+            "priority": t.priority,
+            "department": t.department,
+            "description": (t.description or "")[:MEMORY_SNIPPET_MAX],
+        }
+        for t in (r.task for r in results)
+        if t is not None
     ]

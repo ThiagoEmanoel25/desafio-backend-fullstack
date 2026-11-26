@@ -9,6 +9,9 @@ priority, status). Every query filters by `user_id` in SQL first.
   pgvector), so cosine similarity is computed in Python over the user's rows.
   That is fine for the per-user task volume of this challenge, not at scale.
 - Both rankings are fused with Reciprocal Rank Fusion (k=60).
+- `retrieve_and_rerank` takes up to 20 fused candidates, reorders them with a
+  small explainable score (`rerank`) and keeps at most 5. If the reranker
+  fails, the RRF order is kept.
 
 Embedding failures never break a write or a search: the projection is kept
 without a vector and retrieval falls back to the lexical channel.
@@ -20,7 +23,8 @@ import math
 import re
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,12 +32,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.task import Task
 from app.models.task_search_index import TS_CONFIG, TaskSearchIndex
-from app.schemas.task import TaskStatus
+from app.schemas.task import TaskPriority, TaskStatus
 
 logger = logging.getLogger(__name__)
 
 CANDIDATES_PER_CHANNEL = 20
 RRF_K = 60
+RERANK_CANDIDATES = 20
+MAX_RESULTS = 5
 
 
 def embedding_model() -> str | None:
@@ -129,6 +135,9 @@ class RetrievedTask:
     vector_score: float | None = None
     lexical_rank: int | None = None
     vector_rank: int | None = None
+    # Set only by `rerank`; the retrieval scores above are never overwritten.
+    rerank_score: float | None = None
+    task: Task | None = field(default=None, repr=False, compare=False)
 
     @property
     def origin(self) -> str:
@@ -190,7 +199,10 @@ async def _lexical(db, query, base) -> list[tuple[uuid.UUID, float]]:
     rows = await db.execute(
         base.with_only_columns(TaskSearchIndex.task_id, rank)
         .where(vector.op("@@")(tsquery))
-        .order_by(rank.desc(), TaskSearchIndex.task_id)
+        # Ties: newest first, then title, so the order never depends on random ids.
+        .order_by(
+            rank.desc(), Task.updated_at.desc(), Task.title, TaskSearchIndex.task_id
+        )
         .limit(CANDIDATES_PER_CHANNEL)
     )
     return [(task_id, float(score)) for task_id, score in rows]
@@ -202,12 +214,13 @@ async def _vector(db, user_id, query, base) -> list[tuple[uuid.UUID, float]]:
         return []
     rows = (
         await db.execute(
-            base.with_only_columns(
-                TaskSearchIndex.task_id, TaskSearchIndex.embedding
-            ).where(
+            base.with_only_columns(TaskSearchIndex.task_id, TaskSearchIndex.embedding)
+            .where(
                 TaskSearchIndex.embedding_model == model,
                 TaskSearchIndex.embedding.is_not(None),
             )
+            # Same tie-break as the lexical channel; the score sort below is stable.
+            .order_by(Task.updated_at.desc(), Task.title, TaskSearchIndex.task_id)
         )
     ).all()
     if not rows:
@@ -238,3 +251,87 @@ async def retrieve_related_tasks(
     lexical = await _lexical(db, query, base)
     vector = await _vector(db, user_id, query, base)
     return rrf_fuse(lexical, vector)[:limit]
+
+
+# Re-ranking weights: RRF dominates (normalised to 0..1), the rest only breaks
+# near-ties, so a task found by retrieval is never pushed out by metadata alone.
+W_RRF, W_DEPARTMENT, W_RECENCY, W_PRIORITY = 1.0, 0.15, 0.10, 0.05
+RECENCY_HALF_LIFE_DAYS = 30
+
+
+def rerank(
+    candidates: list[RetrievedTask],
+    *,
+    department: str | None = None,
+    priority: TaskPriority | None = None,
+    now: datetime | None = None,
+) -> list[RetrievedTask]:
+    """Reorder by RRF + same department + recency + priority compatibility.
+
+    `rerank_score = 1.0*rrf/max_rrf + 0.15*same_department
+    + 0.10*recency + 0.05*same_priority`, with
+    `recency = 1 / (1 + age_days / 30)` from `updated_at`.
+    """
+    if not candidates:
+        return []
+    now = now or datetime.now(UTC)
+    top = max(c.rrf_score for c in candidates) or 1.0
+    for c in candidates:
+        task = c.task
+        same_dept = bool(
+            department and task and task.department.lower() == department.lower()
+        )
+        age_days = (now - task.updated_at).total_seconds() / 86400 if task else 0
+        recency = 1 / (1 + max(age_days, 0) / RECENCY_HALF_LIFE_DAYS) if task else 0
+        same_priority = bool(priority and task and task.priority == priority)
+        c.rerank_score = (
+            W_RRF * c.rrf_score / top
+            + W_DEPARTMENT * same_dept
+            + W_RECENCY * recency
+            + W_PRIORITY * same_priority
+        )
+    return sorted(candidates, key=lambda c: c.rerank_score, reverse=True)
+
+
+async def retrieve_and_rerank(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    query: str,
+    *,
+    department: str | None = None,
+    priority: TaskPriority | None = None,
+    exclude_task_id: uuid.UUID | None = None,
+    statuses: Sequence[TaskStatus] | None = None,
+    limit: int = MAX_RESULTS,
+) -> list[RetrievedTask]:
+    """Retrieve more candidates than needed, rerank them, keep at most 5.
+
+    Each result carries its `Task` (loaded with the same `user_id` filter).
+    If the reranker raises, the RRF order is kept and `rerank_score` stays None.
+    """
+    candidates = await retrieve_related_tasks(
+        db,
+        user_id,
+        query,
+        exclude_task_id=exclude_task_id,
+        statuses=statuses,
+        limit=RERANK_CANDIDATES,
+    )
+    if candidates:
+        rows = await db.scalars(
+            select(Task).where(
+                Task.user_id == user_id, Task.id.in_([c.task_id for c in candidates])
+            )
+        )
+        by_id = {t.id: t for t in rows}
+        candidates = [c for c in candidates if c.task_id in by_id]
+        for c in candidates:
+            c.task = by_id[c.task_id]
+    try:
+        ordered = rerank(candidates, department=department, priority=priority)
+    except Exception:
+        logger.warning("rerank_failed", extra={"user_id": str(user_id)}, exc_info=True)
+        for c in candidates:
+            c.rerank_score = None
+        ordered = candidates
+    return ordered[: min(limit, MAX_RESULTS)]

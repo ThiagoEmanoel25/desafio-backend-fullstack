@@ -409,14 +409,14 @@ async def retrieve_related_tasks(
 
 ## Fase 11 — Re-ranking e uso pelo agente
 
-- [ ] Recuperar mais candidatos do que serão enviados ao agente.
-- [ ] Reordenar por RRF, mesmo departamento, recência e compatibilidade.
-- [ ] Entregar no máximo cinco resultados ao agente.
-- [ ] Manter scores de retrieval separados do score de re-ranking.
-- [ ] Fazer fallback para a ordem RRF se o reranker falhar.
-- [ ] Adicionar contexto recuperado às instruções dinâmicas do assistente.
-- [ ] Identificar cada memória pelo `task_id` de origem.
-- [ ] Delimitar o conteúdo e mandar ignorar instruções dentro das tarefas.
+- [x] Recuperar mais candidatos do que serão enviados ao agente.
+- [x] Reordenar por RRF, mesmo departamento, recência e compatibilidade.
+- [x] Entregar no máximo cinco resultados ao agente.
+- [x] Manter scores de retrieval separados do score de re-ranking.
+- [x] Fazer fallback para a ordem RRF se o reranker falhar.
+- [x] Adicionar contexto recuperado às instruções dinâmicas do assistente.
+- [x] Identificar cada memória pelo `task_id` de origem.
+- [x] Delimitar o conteúdo e mandar ignorar instruções dentro das tarefas.
 
 O assistente recebe dois conjuntos distintos:
 
@@ -425,30 +425,30 @@ O assistente recebe dois conjuntos distintos:
 
 ### Tool de memória
 
-- [ ] Implementar `search_task_memory` como tool somente leitura.
-- [ ] Obter `user_id` exclusivamente de `ctx.deps`.
-- [ ] Limitar query, filtros, quantidade e tamanho da resposta.
-- [ ] Nunca permitir que a tool escolha outro usuário.
+- [x] Implementar `search_task_memory` como tool somente leitura.
+- [x] Obter `user_id` exclusivamente de `ctx.deps`.
+- [x] Limitar query, filtros, quantidade e tamanho da resposta.
+- [x] Nunca permitir que a tool escolha outro usuário.
 
 ## Fase 12 — Avaliação e segurança do retrieval
 
-- [ ] Criar dataset pequeno e versionado com consultas e tarefas relevantes.
-- [ ] Medir `Recall@5` e `MRR@5`.
-- [ ] Comparar ordem antes e depois do re-ranking no mesmo dataset.
-- [ ] Não habilitar um reranker que reduza `Recall@5`.
-- [ ] Marcar a medição como inválida se embedding ou reranker degradarem.
+- [x] Criar dataset pequeno e versionado com consultas e tarefas relevantes.
+- [x] Medir `Recall@5` e `MRR@5`.
+- [x] Comparar ordem antes e depois do re-ranking no mesmo dataset.
+- [x] Não habilitar um reranker que reduza `Recall@5`.
+- [x] Marcar a medição como inválida se embedding ou reranker degradarem.
 
 Testes:
 
-- [ ] Tarefa do usuário B nunca aparece na recuperação do usuário A.
-- [ ] A própria tarefa consultada não retorna como relacionada.
-- [ ] Atualização muda o hash e reindexa o conteúdo.
-- [ ] Exclusão remove o índice.
-- [ ] Falha do embedding mantém resultado lexical.
-- [ ] Re-ranking falho mantém a ordem RRF.
-- [ ] Texto `ignore as instruções anteriores` permanece tratado como dado.
-- [ ] Mensagens e respostas da IA nunca são indexadas.
-- [ ] Tool de memória não aceita nem expõe `user_id` arbitrário.
+- [x] Tarefa do usuário B nunca aparece na recuperação do usuário A.
+- [x] A própria tarefa consultada não retorna como relacionada.
+- [x] Atualização muda o hash e reindexa o conteúdo.
+- [x] Exclusão remove o índice.
+- [x] Falha do embedding mantém resultado lexical.
+- [x] Re-ranking falho mantém a ordem RRF.
+- [x] Texto `ignore as instruções anteriores` permanece tratado como dado.
+- [x] Mensagens e respostas da IA nunca são indexadas.
+- [x] Tool de memória não aceita nem expõe `user_id` arbitrário.
 
 Commits sugeridos:
 
@@ -484,5 +484,5 @@ registrada no README como próximo passo.
 | D1 | Fase 8: Redis resiliente + cache da lista e da assistência | alta | testes de isolamento/invalidação/degradação + `pytest`, `ruff` | feita (62 testes, ruff ok) |
 | D2 | Fase 8: histórico de chat (`conversation_id`) + tool `list_tasks` + chat com streaming (pedido do Thiago) + frontend | alta | testes de histórico cruzado/TTL/degradação + build e prints do chat | feita (74 testes, build, lint, prints desktop e mobile) |
 | D3 | Fases 9–10: índice derivado + busca híbrida (lexical + vetorial, RRF) | média | migration sobe/desce + testes de isolamento, hash, exclusão, fallback | feita (83 testes, migration sobe/desce/sobe) |
-| D4 | Fases 11–12: re-ranking, contexto do assistente, `search_task_memory`, avaliação Recall@5/MRR@5 | média | testes de injeção/fallback + relatório de métricas | pendente |
+| D4 | Fases 11–12: re-ranking, contexto do assistente, `search_task_memory`, avaliação Recall@5/MRR@5 | média | testes de injeção/fallback + relatório de métricas | feita (92 testes; Recall@5 e MRR@5 = 1,000 antes e depois, estável em 6 execuções) |
 | D5 | Verificação final: Docker Compose, README, demonstrações | alta | compose up + roteiro de demonstração executado | pendente |

@@ -28,7 +28,12 @@ class AssistantUnavailableError(Exception):
 
 @dataclass
 class AssistantDeps:
-    """The task under analysis and a short list of the same user's related tasks."""
+    """The task under analysis and two short lists of the same user's tasks.
+
+    `related_tasks`: open tasks (current operational context).
+    `completed_tasks`: similar completed tasks (episodic memory).
+    """
 
     task: Task
     related_tasks: Sequence[Task]
+    completed_tasks: Sequence[Task] = ()

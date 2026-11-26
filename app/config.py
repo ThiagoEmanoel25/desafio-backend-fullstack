@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://app:app@db:5432/desafio"
+    # Separate Postgres database used only by the test suite
+    TEST_DATABASE_URL: str | None = None
 
     # JWT
     JWT_SECRET_KEY: str = "dev-secret-key-not-for-production"

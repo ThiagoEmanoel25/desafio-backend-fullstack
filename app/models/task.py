@@ -1,29 +1,49 @@
-"""
-Task Model (Core Business Entity)
-===================================
-This file defines the Task SQLAlchemy model.
+"""Task model."""
 
-Use app/models/user.py as a reference for the SQLAlchemy 2.0 typed style
-(`Mapped[...]` + `mapped_column(...)`).
+import uuid
+from datetime import datetime
 
-You should implement here:
-- Task class inheriting from Base, table name "tasks"
-- Fields:
-    id (UUID, primary key)
-    title (str, required)
-    description (str, optional)
-    status (enum: pending / in_progress / completed)  -> default "pending"
-    priority (enum: low / medium / high / urgent)     -> default "medium"
-    department (str)
-    user_id (UUID, FK to users.id)  -> the OWNER of the task
-    created_at (datetime), updated_at (datetime)
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column
 
-Every task belongs to exactly one user (`user_id`). A user must NEVER be able
-to read, update or delete a task owned by another user.
+from app.models.base import Base
+from app.schemas.task import TaskPriority, TaskStatus
 
-After creating the model, remember to:
-1. Import it in app/models/__init__.py (so Alembic can detect it)
-2. Generate and apply a migration:
-       alembic revision --autogenerate -m "create users and tasks tables"
-       alembic upgrade head
-"""
+
+def _values(enum_cls: type[TaskStatus] | type[TaskPriority]) -> list[str]:
+    """Store the lowercase enum values in the database, not the member names."""
+    return [member.value for member in enum_cls]
+
+
+class Task(Base):
+    """A task owned by exactly one user (`user_id` is the isolation boundary)."""
+
+    __tablename__ = "tasks"
+    __table_args__ = (
+        Index("ix_tasks_user_id", "user_id"),
+        Index("ix_tasks_user_id_created_at", "user_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[TaskStatus] = mapped_column(
+        Enum(TaskStatus, name="task_status", values_callable=_values),
+        default=TaskStatus.pending,
+        server_default=TaskStatus.pending.value,
+    )
+    priority: Mapped[TaskPriority] = mapped_column(
+        Enum(TaskPriority, name="task_priority", values_callable=_values),
+        default=TaskPriority.medium,
+        server_default=TaskPriority.medium.value,
+    )
+    department: Mapped[str] = mapped_column(String(100))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

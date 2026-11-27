@@ -14,6 +14,7 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('medium')
   const [department, setDepartment] = useState('')
+  const [dueDate, setDueDate] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -23,6 +24,7 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
     setSubmitting(true)
     try {
       const task = await createTask({
+        due_date: dueDate || null,
         title,
         description: description || null,
         priority,
@@ -32,6 +34,7 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
       setDescription('')
       setPriority('medium')
       setDepartment('')
+      setDueDate('')
       onCreated(task)
     } catch (err) {
       if (onApiError(err)) return
@@ -46,20 +49,22 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
   }
 
   return (
-    <section className="card stack">
-      <h2>Nova tarefa</h2>
+    <section className="card stack task-composer" id="new-task">
+      <div><p className="eyebrow">Do plano à ação</p><h2>Nova tarefa</h2></div>
       <form onSubmit={handleSubmit} className="stack">
-        <input
+        <label className="input-label" htmlFor="task-title">O que precisa ser feito?</label>
+        <input id="task-title"
           aria-label="Título"
-          placeholder="Título"
+          placeholder="Ex.: Revisar a proposta comercial"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
           minLength={3}
         />
-        <textarea
+        <label className="input-label" htmlFor="task-description">Contexto <span className="muted">· opcional</span></label>
+        <textarea id="task-description"
           aria-label="Descrição"
-          placeholder="Descrição (opcional)"
+          placeholder="Inclua objetivos e detalhes para receber um plano melhor da IA."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -83,6 +88,8 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
             required
           />
         </div>
+        <label className="input-label" htmlFor="task-due">Prazo · opcional</label>
+        <input id="task-due" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
         {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? 'Criando…' : 'Criar tarefa'}

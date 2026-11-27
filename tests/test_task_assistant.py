@@ -2,10 +2,12 @@
 
 import uuid
 
+import pytest
 from httpx import AsyncClient
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.task_assistant import task_assistant
@@ -13,6 +15,49 @@ from app.models.task import Task
 from app.models.user import User
 
 DEPT = "Financeiro"
+
+
+async def test_sql_retrieval_failure_preserves_fallback(db_session, user, monkeypatch):
+    from app.services import task_assistant_service
+
+    task = await _task(db_session, user, "Analisar orçamento")
+    related = await _task(db_session, user, "Preparar orçamento")
+
+    async def broken_search(*args, **kwargs):
+        await db_session.execute(text("SELECT 1 / 0"))
+
+    monkeypatch.setattr(task_assistant_service, "_search", broken_search)
+    opened, completed = await task_assistant_service._related_tasks(
+        db_session, user.id, task
+    )
+    assert [item.id for item in opened] == [related.id]
+    assert completed == []
+    assert await db_session.scalar(text("SELECT 1")) == 1
+
+
+def test_missing_description_requires_questions():
+    from types import SimpleNamespace
+
+    from pydantic_ai import ModelRetry
+
+    from app.agent.task_assistant import require_missing_information_questions
+    from app.schemas.assistance import TaskAssistance
+
+    ctx = SimpleNamespace(deps=SimpleNamespace(task=SimpleNamespace(description=" ")))
+    output = TaskAssistance(
+        summary="A descrição não foi informada.",
+        complexity="low",
+        estimated_hours=1,
+        suggested_priority="medium",
+        priority_reason="A prioridade atual precisa ser confirmada.",
+        steps=["Confirmar o objetivo."],
+        risks=[],
+        clarifying_questions=[],
+    )
+    with pytest.raises(ModelRetry):
+        require_missing_information_questions(ctx, output)
+    output.clarifying_questions = ["Qual é o objetivo esperado?"]
+    assert require_missing_information_questions(ctx, output) is output
 
 
 async def _task(db: AsyncSession, owner: User, title: str, **kw) -> Task:
@@ -57,7 +102,9 @@ async def test_assist_returns_structured_plan(
     user: User,
     auth_headers: dict[str, str],
 ):
-    task = await _task(db_session, user, "Fechar o balanço")
+    task = await _task(
+        db_session, user, "Fechar o balanço", description="Conferir o mês."
+    )
     with task_assistant.override(model=TestModel()):
         response = await async_client.post(
             f"/v1/tasks/{task.id}/assist", headers=auth_headers

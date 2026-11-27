@@ -117,6 +117,10 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
         departamento Comercial” ou “Quais tarefas urgentes eu tenho?”
       </p>
       <ul ref={logRef} className="chat-log" aria-live="polite">
+        {messages.length === 0 && <li className="chat-welcome"><span aria-hidden="true">✦</span>
+          <h3>Vamos tirar uma ideia do papel?</h3>
+          <p>Posso criar tarefas, consultar suas prioridades e encontrar trabalhos parecidos.</p>
+        </li>}
         {messages.map((m, i) =>
           m.text ? (
             <li key={i} className={`bubble ${m.role}`}>

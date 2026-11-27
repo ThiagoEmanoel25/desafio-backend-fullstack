@@ -1,17 +1,17 @@
 /* Own CSS, no UI library. Colors chosen for WCAG AA contrast on their backgrounds. */
 
 :root {
-  --bg: #f4f6fa;
+  --bg: #f5f5f0;
   --surface: #ffffff;
   --border: #d8dee6;
   --text: #1b2330;
   --muted: #5a6474; /* 5.9:1 on white */
-  --primary: #2453d6;
-  --primary-hover: #1b43b4;
+  --primary: #186451;
+  --primary-hover: #104b3c;
   --danger: #b42318;
   --danger-hover: #912018;
   --focus: #2453d6;
-  --radius: 10px;
+  --radius: 16px;
   --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
 
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -21,7 +21,24 @@
 }
 
 * { box-sizing: border-box; }
+.calendar-scroll { overflow-x: auto; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(75px, 1fr)); min-width: 540px; gap: 4px; }
+.calendar-grid > strong { text-align: center; font-size: 0.75rem; color: var(--muted); padding: 0.5rem; }
+.calendar-day { min-height: 95px; background: #f7f8f4; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem; }
+.calendar-day time { font-size: 0.75rem; color: var(--muted); }
+button.calendar-task { display: block; width: 100%; min-height: 30px; padding: 0.3rem; margin-top: 0.3rem; text-align: left; font-size: 0.7rem; overflow-wrap: anywhere; }
 body { margin: 0; }
+html { scroll-behavior: smooth; }
+.between { justify-content: space-between; }
+.workspace-heading { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin: 1rem 0 2rem; }
+.workspace-heading h1 { font-size: clamp(1.8rem, 3vw, 2.65rem); letter-spacing: -0.055em; margin: 0.3rem 0 0.5rem; }
+.quick-create { background: var(--primary); color: white; padding: 0.8rem 1.2rem; border-radius: 10px; text-decoration: none; white-space: nowrap; font-weight: 600; }
+.quick-create:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.workspace-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+.workspace-stats > div { display: flex; flex-direction: column; gap: 0.5rem; padding: 1.2rem 1.4rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.workspace-stats span { color: var(--muted); font-size: 0.82rem; }
+.workspace-stats strong { font-size: 1.8rem; letter-spacing: -0.05em; }
+.input-label { font-size: 0.8rem; font-weight: 650; margin-bottom: -0.4rem; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: 1.6rem; margin-bottom: 1rem; }
 h2 { font-size: 1.15rem; }
@@ -52,7 +69,19 @@ h3 { font-size: 0.95rem; margin-bottom: 0.4rem; }
 .eyebrow { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); font-weight: 700; }
 
 /* Login */
-.login { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; }
+.login { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 5vw; padding: 5vw 8vw; }
+.login-story { background: #153f35; color: #f7f8ef; padding: clamp(2rem, 4vw, 4.5rem); border-radius: 28px; min-height: 75vh; display: flex; flex-direction: column; justify-content: center; gap: 2rem; }
+.login-story .eyebrow { color: #acd7c3; }
+.login-story h2 { font-size: clamp(2.5rem, 4.7vw, 5rem); line-height: 1.05; letter-spacing: -0.065em; font-weight: 600; }
+.login-story > p { max-width: 30rem; color: #d5e6dc; }
+.login-monogram { font-size: 2.5rem; font-weight: 800; }
+.login-preview { padding: 1.5rem; border: 1px solid #608c79; border-radius: 16px; display: flex; flex-direction: column; gap: 0.6rem; background: #204e41; }
+.login-preview span { font-size: 0.65rem; letter-spacing: 0.15em; color: #c6dbce; }
+.login-preview strong { font-size: 1.3rem; }
+.login-preview p { font-size: 0.8rem; color: #c6dbce; }
+.chat-welcome { padding: 2rem 1rem; text-align: center; color: var(--muted); }
+.chat-welcome > span { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; background: #e6f0e8; color: var(--primary); font-size: 1.8rem; margin-bottom: 1rem; }
+.chat-welcome p { font-size: 0.85rem; }
 .login-card { width: 100%; max-width: 400px; padding: 1.75rem; }
 .login-card h1 { margin: 0.25rem 0; }
 
@@ -61,6 +90,10 @@ input, select, textarea, button {
   font: inherit; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border);
   background: var(--surface); color: var(--text);
 }
+input, textarea { padding: 0.75rem 0.9rem; background: #fafbf9; }
+button { min-height: 40px; transition: background 150ms ease; }
+.task-composer > div { padding-bottom: 0.3rem; }
+.task-composer { scroll-margin-top: 1.5rem; }
 textarea { resize: vertical; min-height: 3.5rem; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
   outline: 3px solid var(--focus); outline-offset: 2px;
@@ -104,6 +137,8 @@ button.danger-text:hover { background: #fdecea; color: var(--danger-hover); }
   padding: 0.85rem 1rem; border: 1px solid var(--border); border-left: 4px solid #c3cad5; border-radius: 8px;
 }
 .task-in_progress { border-left-color: var(--primary); }
+.task { background: #fff; padding: 1.1rem; }
+.task-actions { width: 100%; padding-top: 0.7rem; border-top: 1px solid #edf0e9; }
 .task-completed { border-left-color: #2f8a4c; }
 .task-completed .task-title { color: var(--muted); text-decoration: line-through; }
 .task-main { min-width: 0; flex: 1 1 260px; display: flex; flex-direction: column; gap: 0.3rem; }
@@ -162,5 +197,16 @@ button.danger-text:hover { background: #fdecea; color: var(--danger-hover); }
 @keyframes pulse { 50% { opacity: 0.25; } }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .skeleton-row, .dots { animation: none; }
+}
+@media (max-width: 800px) {
+  .login { grid-template-columns: 1fr; padding: 1.5rem; gap: 1.5rem; }
+  .login-story { min-height: auto; padding: 2rem; gap: 1rem; }
+  .login-story h2 { font-size: 2.5rem; }
+  .login-preview { display: none; }
+  .login-card { justify-self: center; }
+  .workspace-heading { align-items: flex-start; flex-direction: column; }
+  .workspace-stats { gap: 0.5rem; }
+  .workspace-stats > div { padding: 0.9rem; }
 }

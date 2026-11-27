@@ -5,6 +5,7 @@ export type TaskStatus = 'pending' | 'in_progress' | 'completed'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
 export interface Task {
+  due_date?: string | null
   id: string
   title: string
   description: string | null
@@ -16,6 +17,7 @@ export interface Task {
 }
 
 export interface TaskCreate {
+  due_date?: string | null
   title: string
   description?: string | null
   priority: TaskPriority

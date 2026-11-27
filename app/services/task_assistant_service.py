@@ -57,8 +57,9 @@ async def _related_tasks(
 ) -> tuple[Sequence[Task], Sequence[Task]]:
     """(open tasks, completed tasks) for the assistant; never raises."""
     try:
-        open_tasks = await _search(db, user_id, task, OPEN_STATUSES)
-        completed = await _search(db, user_id, task, (TaskStatus.completed,))
+        async with db.begin_nested():
+            open_tasks = await _search(db, user_id, task, OPEN_STATUSES)
+            completed = await _search(db, user_id, task, (TaskStatus.completed,))
     except Exception:
         logger.warning(
             "assist_retrieval_failed",
@@ -81,7 +82,7 @@ async def assist_task(
     log = {"task_id": str(task_id), "user_id": str(user_id)}
     version = await cache.task_list_version(user_id)
     key = (
-        f"assist:{user_id}:{task_id}:{task.updated_at.isoformat()}:{version}"
+        f"assist:v2:{user_id}:{task_id}:{task.updated_at.isoformat()}:{version}"
         if version is not None
         else None
     )

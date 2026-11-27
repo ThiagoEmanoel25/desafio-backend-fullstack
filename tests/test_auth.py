@@ -21,7 +21,8 @@ async def test_register_success(async_client: AsyncClient) -> None:
     response = await async_client.post("/v1/auth/register", json=REGISTER)
     assert response.status_code == 201
     body = response.json()
-    assert set(body) == {"id", "email", "full_name", "created_at"}
+    assert set(body) == {"id", "email", "full_name", "created_at", "is_admin"}
+    assert body["is_admin"] is False
     assert body["email"] == REGISTER["email"]
 
 

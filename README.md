@@ -479,6 +479,25 @@ seed/                        # seed_data.py (idempotente, 2 usuários)
 
 ## Entrega
 
+### Administração de contas (extensão solicitada)
+
+Cada usuário continua representando um tenant. Administradores podem listar
+contas e ativar/desativar usuários pelo botão **Administrar tenants** após o
+login. Os endpoints `/v1/admin/tenants` exigem `is_admin` no banco; contas comuns
+recebem 403. O painel não expõe tarefas, hashes ou tokens e não permite alterar
+contas administrativas. Desativar uma conta bloqueia inclusive tokens existentes.
+
+Crie uma conta administrativa explicitamente no terminal:
+
+```bash
+docker compose exec api alembic upgrade head
+docker compose exec api python -m seed.create_admin
+```
+
+O comando pede nome, e-mail e senha sem exibi-la. Não existe senha administrativa
+padrão; o seed normal não concede privilégios. Esta extensão foi autorizada após
+o escopo original e não introduz organizações ou compartilhamento de tarefas.
+
 1. Crie um repositório **público** no GitHub a partir deste projeto.
 2. Atualize este README com:
    - as **credenciais do seed**;

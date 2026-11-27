@@ -58,6 +58,7 @@ export interface TaskFilters {
 }
 
 export interface User {
+  is_admin?: boolean
   id: string
   email: string
   full_name: string

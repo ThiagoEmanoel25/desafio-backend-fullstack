@@ -10,6 +10,11 @@ obrigatório.
 
 ## Contrato de escopo
 
+Extensão posterior autorizada: painel administrativo de contas. Cada tenant
+continua sendo um usuário. Inclui listagem paginada e ativação/desativação,
+permissão administrativa verificada no banco e provisionamento explícito por
+CLI. Não inclui organizações, acesso administrativo a tarefas ou impersonação.
+
 ### Obrigatório
 
 - Autenticação JWT: registro, login e usuário atual.
@@ -459,6 +464,23 @@ Commits sugeridos:
 - `test: evaluate task retrieval quality and isolation`
 
 ## Verificação final
+
+### Validação de entrega atualizada
+
+- [x] Publicar `feature/frontend-polish` no fork público (push concluído).
+- [x] Clonar a branch pelo GitHub em diretório temporário, copiar
+      `.env.example` para `.env` e validar `docker compose config --quiet`.
+- [x] Confirmar backend: 92 testes passando no container com
+      `TEST_DATABASE_URL=postgresql+asyncpg://app:app@db:5432/desafio_test`.
+- [x] Confirmar frontend: 11 testes, lint e build passando no container.
+- [x] Confirmar `ruff check .` sem erros.
+- [x] Registrar aprovação do escopo atual: streaming, filtros simples na UI
+      e testes de frontend foram aceitos; não adicionar novas funcionalidades.
+
+O clone remoto foi validado quanto ao conteúdo e à configuração Compose.
+A execução completa a partir desse novo clone ainda não foi repetida; a
+execução em clone limpo local está descrita no item correspondente abaixo.
+O bloqueio anterior de push (403) foi resolvido na tentativa atual.
 
 - [x] Repetir todos os critérios do escopo obrigatório. _(pytest 92, ruff, alembic upgrade/downgrade em banco vazio, seed 2x sem duplicar, build)_
 - [x] Subir API, PostgreSQL, Redis e frontend pelo Docker Compose.

@@ -54,14 +54,14 @@ requisição, nunca de argumentos produzidos pela LLM.
 
 ## Regras de execução
 
-- [ ] Trabalhar em branches `feature/...` pequenas.
-- [ ] Fazer commits convencionais e focados.
-- [ ] Não iniciar os diferenciais antes de todo o obrigatório estar verde.
-- [ ] Se um diferencial ficar parcial, removê-lo da entrega em vez de manter um
+- [x] Trabalhar em branches `feature/...` pequenas.
+- [x] Fazer commits convencionais e focados.
+- [x] Não iniciar os diferenciais antes de todo o obrigatório estar verde.
+- [x] Se um diferencial ficar parcial, removê-lo da entrega em vez de manter um
       fluxo quebrado.
-- [ ] Escrever o teste de isolamento junto com cada acesso novo a dados.
-- [ ] Não chamar provedores reais nos testes automatizados.
-- [ ] Atualizar este arquivo ao concluir ou alterar uma decisão.
+- [x] Escrever o teste de isolamento junto com cada acesso novo a dados.
+- [x] Não chamar provedores reais nos testes automatizados.
+- [x] Atualizar este arquivo ao concluir ou alterar uma decisão.
 
 ## Ordem de prioridade da avaliação
 
@@ -78,155 +78,155 @@ entregues e verificáveis.
 
 - [x] Usar o fork público `ThiagoEmanoel25/desafio-backend-fullstack` como
       `origin` e o repositório original como `upstream`.
-- [ ] Criar a branch `feature/project-foundation`.
-- [ ] Criar `.env` local a partir de `.env.example` sem versionar segredos.
-- [ ] Definir `TEST_DATABASE_URL` para um PostgreSQL separado.
-- [ ] Configurar fixtures assíncronas e override de `get_db`.
-- [ ] Bloquear chamadas reais de modelo durante os testes.
-- [ ] Confirmar que frontend e API compilam antes das mudanças.
+- [ ] Criar a branch `feature/project-foundation`. _(não confirmado: o trabalho desta fase está no commit `test: configure isolated async test database`, na `feature/mandatory-scope`)_
+- [x] Criar `.env` local a partir de `.env.example` sem versionar segredos.
+- [x] Definir `TEST_DATABASE_URL` para um PostgreSQL separado.
+- [x] Configurar fixtures assíncronas e override de `get_db`.
+- [x] Bloquear chamadas reais de modelo durante os testes.
+- [x] Confirmar que frontend e API compilam antes das mudanças.
 
 Critério de conclusão:
 
-- [ ] `test_health.py` passa usando o ambiente de testes documentado.
-- [ ] Nenhum teste pode acessar uma LLM real.
+- [x] `test_health.py` passa usando o ambiente de testes documentado.
+- [x] Nenhum teste pode acessar uma LLM real.
 
 Commit sugerido: `test: configure isolated async test database`
 
 ## Fase 1 — Domínio de tarefas e banco
 
-- [ ] Implementar `TaskStatus` e `TaskPriority` uma única vez e reutilizá-los.
-- [ ] Implementar `TaskCreate`, `TaskUpdate` e `TaskResponse` com
+- [x] Implementar `TaskStatus` e `TaskPriority` uma única vez e reutilizá-los.
+- [x] Implementar `TaskCreate`, `TaskUpdate` e `TaskResponse` com
       `from_attributes=True` na resposta.
-- [ ] Aplicar limites de tamanho aos campos recebidos pela API e pela IA.
-- [ ] Implementar o model `Task` com `Mapped[...]`.
-- [ ] Incluir `title`, `description`, `status`, `priority`, `department`,
+- [x] Aplicar limites de tamanho aos campos recebidos pela API e pela IA.
+- [x] Implementar o model `Task` com `Mapped[...]`.
+- [x] Incluir `title`, `description`, `status`, `priority`, `department`,
       `user_id`, `created_at` e `updated_at`.
-- [ ] Criar FK obrigatória para `users.id` e índices úteis por usuário.
-- [ ] Garantir `created_at` e `updated_at` no banco.
-- [ ] Importar `Task` em `app/models/__init__.py`.
-- [ ] Criar e revisar a migration de `users` e `tasks`.
+- [x] Criar FK obrigatória para `users.id` e índices úteis por usuário.
+- [x] Garantir `created_at` e `updated_at` no banco.
+- [x] Importar `Task` em `app/models/__init__.py`.
+- [x] Criar e revisar a migration de `users` e `tasks`.
 
 Critério de conclusão:
 
-- [ ] Migration sobe e desce em um banco vazio.
-- [ ] Payload inválido é rejeitado antes de acessar o repositório.
+- [x] Migration sobe e desce em um banco vazio.
+- [x] Payload inválido é rejeitado antes de acessar o repositório.
 
 Commit sugerido: `feat: add task model schemas and migration`
 
 ## Fase 2 — Autenticação JWT
 
-- [ ] Implementar `RegisterRequest`, `LoginRequest` ou formulário OAuth2,
+- [x] Implementar `RegisterRequest`, `LoginRequest` ou formulário OAuth2,
       `TokenResponse` e `UserResponse`.
-- [ ] Implementar o repositório de usuários.
-- [ ] Implementar registro com hash bcrypt e resposta `409` para duplicidade.
-- [ ] Implementar login e emissão de JWT.
-- [ ] Implementar `get_current_user` com tratamento uniforme de `401`.
-- [ ] Rejeitar token inválido, expirado, usuário ausente ou inativo.
-- [ ] Implementar `GET /v1/auth/me`.
-- [ ] Adicionar summaries e response models às rotas.
+- [x] Implementar o repositório de usuários.
+- [x] Implementar registro com hash bcrypt e resposta `409` para duplicidade.
+- [x] Implementar login e emissão de JWT.
+- [x] Implementar `get_current_user` com tratamento uniforme de `401`.
+- [x] Rejeitar token inválido, expirado, usuário ausente ou inativo.
+- [x] Implementar `GET /v1/auth/me`.
+- [x] Adicionar summaries e response models às rotas.
 
 Testes:
 
-- [ ] Registro bem-sucedido.
-- [ ] E-mail duplicado.
-- [ ] Login válido e senha inválida.
-- [ ] Token ausente, inválido e usuário inativo.
+- [x] Registro bem-sucedido.
+- [x] E-mail duplicado.
+- [x] Login válido e senha inválida.
+- [x] Token ausente, inválido e usuário inativo.
 
 Commit sugerido: `feat: implement jwt authentication`
 
 ## Fase 3 — CRUD com isolamento por usuário
 
-- [ ] Implementar `task_repository` sem método de leitura apenas por `task_id`.
-- [ ] Exigir `user_id` em toda busca, atualização e exclusão.
-- [ ] Implementar `task_service` como regra compartilhada pela API e pelas tools.
-- [ ] Implementar criação, listagem, detalhe, PATCH e exclusão.
-- [ ] Suportar filtros opcionais de `status` e `priority` na listagem.
-- [ ] Aplicar `skip` e `limit` com limites seguros, sem criar uma resposta de
+- [x] Implementar `task_repository` sem método de leitura apenas por `task_id`.
+- [x] Exigir `user_id` em toda busca, atualização e exclusão.
+- [x] Implementar `task_service` como regra compartilhada pela API e pelas tools.
+- [x] Implementar criação, listagem, detalhe, PATCH e exclusão.
+- [x] Suportar filtros opcionais de `status` e `priority` na listagem.
+- [x] Aplicar `skip` e `limit` com limites seguros, sem criar uma resposta de
       paginação além do necessário.
-- [ ] Declarar schemas de entrada e `response_model` em todas as rotas.
-- [ ] Retornar `404` para tarefa ausente ou pertencente a outro usuário.
-- [ ] Registrar criação de tarefa sem dados sensíveis.
+- [x] Declarar schemas de entrada e `response_model` em todas as rotas.
+- [x] Retornar `404` para tarefa ausente ou pertencente a outro usuário.
+- [x] Registrar criação de tarefa sem dados sensíveis.
 
 Testes:
 
-- [ ] CRUD completo e PATCH parcial.
-- [ ] Validação `422`.
-- [ ] Lista contém apenas tarefas do usuário atual.
-- [ ] GET, PATCH e DELETE de tarefa alheia retornam `404`.
-- [ ] Tentativas alheias não alteram a tarefa no banco.
+- [x] CRUD completo e PATCH parcial.
+- [x] Validação `422`.
+- [x] Lista contém apenas tarefas do usuário atual.
+- [x] GET, PATCH e DELETE de tarefa alheia retornam `404`.
+- [x] Tentativas alheias não alteram a tarefa no banco.
 
 Commit sugerido: `feat: implement user scoped task crud`
 
 ## Fase 4 — Agente de criação de tarefas
 
-- [ ] Implementar `ChatRequest` e `ChatResponse`.
-- [ ] Criar `AgentDeps` com sessão e `user_id` autenticado.
-- [ ] Escrever prompt fixo curto, sem dados dinâmicos do usuário.
-- [ ] Mapear linguagem natural para os enums, incluindo `urgente -> urgent`.
-- [ ] Pedir título ou departamento quando estiverem ausentes, sem inventar.
-- [ ] Responder no idioma usado pelo usuário.
-- [ ] Implementar `create_task_tool` com parâmetros tipados.
-- [ ] Construir `TaskCreate` dentro da tool antes de salvar.
-- [ ] Obter `user_id` exclusivamente de `ctx.deps`.
-- [ ] Retornar a tarefa criada em `created_task`.
-- [ ] Converter falha do provedor ou limite excedido em erro controlado.
-- [ ] Aplicar limites de requisições e tool calls ao run.
+- [x] Implementar `ChatRequest` e `ChatResponse`.
+- [x] Criar `AgentDeps` com sessão e `user_id` autenticado.
+- [x] Escrever prompt fixo curto, sem dados dinâmicos do usuário.
+- [x] Mapear linguagem natural para os enums, incluindo `urgente -> urgent`.
+- [x] Pedir título ou departamento quando estiverem ausentes, sem inventar.
+- [x] Responder no idioma usado pelo usuário.
+- [x] Implementar `create_task_tool` com parâmetros tipados.
+- [x] Construir `TaskCreate` dentro da tool antes de salvar.
+- [x] Obter `user_id` exclusivamente de `ctx.deps`.
+- [x] Retornar a tarefa criada em `created_task`.
+- [x] Converter falha do provedor ou limite excedido em erro controlado.
+- [x] Aplicar limites de requisições e tool calls ao run.
 
 Testes:
 
-- [ ] Chat exige autenticação.
-- [ ] `TestModel` cria tarefa para o usuário atual.
-- [ ] A mensagem de referência cria “Revisar relatório financeiro” com
+- [x] Chat exige autenticação.
+- [x] `TestModel` cria tarefa para o usuário atual.
+- [x] A mensagem de referência cria “Revisar relatório financeiro” com
       prioridade `urgent` e departamento `Comercial`.
-- [ ] A tool não aceita `user_id` fornecido pelo modelo.
-- [ ] Falha simulada do modelo retorna `503`.
+- [x] A tool não aceita `user_id` fornecido pelo modelo.
+- [x] Falha simulada do modelo retorna `503`.
 
 Commit sugerido: `feat: add task creation agent`
 
 ## Fase 5 — Assistente estruturado
 
-- [ ] Implementar `TaskAssistance` com descrições e limites para `summary`,
+- [x] Implementar `TaskAssistance` com descrições e limites para `summary`,
       `complexity`, `estimated_hours`, `suggested_priority`, `priority_reason`,
       `steps`, `risks` e `clarifying_questions`.
-- [ ] Criar agente separado com `output_type=TaskAssistance`.
-- [ ] Buscar a tarefa pelo par `user_id + task_id`.
-- [ ] Buscar no máximo cinco tarefas abertas do mesmo usuário e departamento.
-- [ ] Excluir a própria tarefa do contexto complementar.
-- [ ] Enviar apenas título, descrição, status, prioridade e departamento.
-- [ ] Separar instruções fixas do contexto dinâmico.
-- [ ] Injetar o contexto via `@task_assistant.instructions` e
+- [x] Criar agente separado com `output_type=TaskAssistance`.
+- [x] Buscar a tarefa pelo par `user_id + task_id`.
+- [x] Buscar no máximo cinco tarefas abertas do mesmo usuário e departamento.
+- [x] Excluir a própria tarefa do contexto complementar.
+- [x] Enviar apenas título, descrição, status, prioridade e departamento.
+- [x] Separar instruções fixas do contexto dinâmico.
+- [x] Injetar o contexto via `@task_assistant.instructions` e
       `RunContext[AssistantDeps]`.
-- [ ] Exigir perguntas de esclarecimento quando faltar descrição.
-- [ ] Registrar duração, sucesso, modelo e `task_id`, sem prompt completo.
-- [ ] Converter falhas da IA em `503`.
+- [x] Exigir perguntas de esclarecimento quando faltar descrição.
+- [x] Registrar duração, sucesso, modelo e `task_id`, sem prompt completo.
+- [x] Converter falhas da IA em `503`.
 
 Testes:
 
-- [ ] A saída atende ao schema estruturado.
-- [ ] Tarefa alheia retorna `404` antes de chamar o modelo.
-- [ ] O contexto contém a tarefa atual.
-- [ ] O contexto nunca contém dados de outro usuário.
-- [ ] Falha simulada do modelo retorna erro controlado.
+- [x] A saída atende ao schema estruturado.
+- [x] Tarefa alheia retorna `404` antes de chamar o modelo.
+- [x] O contexto contém a tarefa atual.
+- [x] O contexto nunca contém dados de outro usuário.
+- [x] Falha simulada do modelo retorna erro controlado.
 
 Commit sugerido: `feat: add structured task assistant`
 
 ## Fase 6 — Frontend obrigatório
 
-- [ ] Implementar login, armazenamento do token e estado de carregamento.
-- [ ] Encerrar sessão quando a API responder `401`.
-- [ ] Implementar listagem com estados de carregamento, vazio e erro.
-- [ ] Implementar formulário de criação e exibição de erros `422`.
-- [ ] Implementar alteração de status e exclusão.
-- [ ] Implementar chat e atualizar a lista quando ele criar uma tarefa.
-- [ ] Implementar painel de assistência com loading, resultado e erro.
-- [ ] Configurar CORS apenas para as origens permitidas.
-- [ ] Manter estado com os recursos já presentes no React; não adicionar
+- [x] Implementar login, armazenamento do token e estado de carregamento.
+- [x] Encerrar sessão quando a API responder `401`.
+- [x] Implementar listagem com estados de carregamento, vazio e erro.
+- [x] Implementar formulário de criação e exibição de erros `422`.
+- [x] Implementar alteração de status e exclusão.
+- [x] Implementar chat e atualizar a lista quando ele criar uma tarefa.
+- [x] Implementar painel de assistência com loading, resultado e erro.
+- [x] Configurar CORS apenas para as origens permitidas.
+- [x] Manter estado com os recursos já presentes no React; não adicionar
       biblioteca de estado ou design sem necessidade.
 
 Critério de conclusão:
 
-- [ ] O fluxo login → CRUD → chat → assistência funciona no Docker Compose.
-- [ ] `npm run build` passa.
+- [x] O fluxo login → CRUD → chat → assistência funciona no Docker Compose.
+- [x] `npm run build` passa.
 
 Commits sugeridos:
 
@@ -235,30 +235,30 @@ Commits sugeridos:
 
 ## Fase 7 — Qualidade obrigatória
 
-- [ ] Implementar `setup_logging()` com logs estruturados em inglês e chamá-lo
+- [x] Implementar `setup_logging()` com logs estruturados em inglês e chamá-lo
       na inicialização de `app/main.py`.
-- [ ] Registrar pelo menos criação de tarefa e chamadas aos dois agentes.
-- [ ] Não registrar senha, JWT, e-mail, prompt completo ou descrição da tarefa.
-- [ ] Implementar seed idempotente com dois usuários e tarefas distintas.
-- [ ] Documentar as credenciais do seed.
-- [ ] Adicionar docstrings e documentação relevante ao Swagger.
-- [ ] Responder ao questionário técnico com base na implementação real.
-- [ ] Responder especificamente sobre async no FastAPI, fluxo da tool,
+- [x] Registrar pelo menos criação de tarefa e chamadas aos dois agentes.
+- [x] Não registrar senha, JWT, e-mail, prompt completo ou descrição da tarefa.
+- [x] Implementar seed idempotente com dois usuários e tarefas distintas.
+- [x] Documentar as credenciais do seed.
+- [x] Adicionar docstrings e documentação relevante ao Swagger.
+- [x] Responder ao questionário técnico com base na implementação real.
+- [x] Responder especificamente sobre async no FastAPI, fluxo da tool,
       contexto enviado à LLM, origem segura do `user_id` e próximos passos.
-- [ ] Explicar no README exatamente qual contexto vai para cada agente.
-- [ ] Documentar o que ficou de fora e por quê.
-- [ ] Manter `README.en-us.md` coerente com as instruções de execução alteradas.
-- [ ] Rodar suíte completa, lint, migration e build do frontend.
+- [x] Explicar no README exatamente qual contexto vai para cada agente.
+- [x] Documentar o que ficou de fora e por quê.
+- [x] Manter `README.en-us.md` coerente com as instruções de execução alteradas.
+- [x] Rodar suíte completa, lint, migration e build do frontend.
 
 Critério de conclusão do obrigatório:
 
-- [ ] `pytest -v` passa.
-- [ ] `ruff check .` passa.
-- [ ] `alembic upgrade head` funciona em banco vazio.
-- [ ] Seed pode rodar duas vezes sem duplicar dados.
-- [ ] O frontend compila.
-- [ ] O README permite executar e avaliar o projeto sem conhecimento externo.
-- [ ] O checklist obrigatório do `README.md` está completamente marcado.
+- [x] `pytest -v` passa.
+- [x] `ruff check .` passa.
+- [x] `alembic upgrade head` funciona em banco vazio.
+- [x] Seed pode rodar duas vezes sem duplicar dados.
+- [x] O frontend compila.
+- [x] O README permite executar e avaliar o projeto sem conhecimento externo.
+- [x] O checklist obrigatório do `README.md` está completamente marcado.
 
 Commit sugerido: `chore: add logging seed and delivery documentation`
 
@@ -459,16 +459,16 @@ Commits sugeridos:
 
 ## Verificação final
 
-- [ ] Repetir todos os critérios do escopo obrigatório.
-- [ ] Subir API, PostgreSQL, Redis e frontend pelo Docker Compose.
-- [ ] Demonstrar cache miss e cache hit sem mudar a resposta.
-- [ ] Demonstrar continuação de conversa do mesmo usuário.
-- [ ] Demonstrar que outro usuário não acessa histórico, cache ou RAG.
-- [ ] Demonstrar assistência usando tarefas abertas e concluídas relevantes.
-- [ ] Atualizar README com arquitetura, decisões, degradações e limites.
-- [ ] Incluir credenciais do seed e respostas finais do questionário.
-- [ ] Confirmar que o repositório público executa a partir de um clone limpo.
-- [ ] Confirmar que nenhum terceiro diferencial foi implementado.
+- [x] Repetir todos os critérios do escopo obrigatório. _(pytest 92, ruff, alembic upgrade/downgrade em banco vazio, seed 2x sem duplicar, build)_
+- [x] Subir API, PostgreSQL, Redis e frontend pelo Docker Compose.
+- [x] Demonstrar cache miss e cache hit sem mudar a resposta.
+- [x] Demonstrar continuação de conversa do mesmo usuário.
+- [x] Demonstrar que outro usuário não acessa histórico, cache ou RAG.
+- [x] Demonstrar assistência usando tarefas abertas e concluídas relevantes. _(por teste: `tests/test_task_rag.py`; ao vivo só com o modelo de teste)_
+- [x] Atualizar README com arquitetura, decisões, degradações e limites.
+- [x] Incluir credenciais do seed e respostas finais do questionário.
+- [ ] Confirmar que o repositório público executa a partir de um clone limpo. _(pendente: o push ao GitHub está bloqueado, 403)_
+- [ ] Confirmar que nenhum terceiro diferencial foi implementado. _(não vale: a pedido do Thiago entraram também chat com streaming, filtros na UI e testes de frontend; registrados no README)_
 
 ## Definição de pronto
 

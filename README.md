@@ -207,14 +207,15 @@ Por isso, o código usa o ID autenticado nas consultas e nas gravações. Isso n
 
 Se você tivesse mais uma semana, o que melhoraria ou adicionaria no projeto? Por quê?
 
-**Resposta:** os três primeiros itens que eu tinha listado aqui — Redis (cache da lista e da avaliação, histórico de chat limitado), recuperação sobre as tarefas do próprio usuário e a tool `list_tasks` — **foram implementados** como diferenciais (ver [Índice de busca](#índice-de-busca-das-tarefas-busca-híbrida) e [Contexto enviado a cada agente](#contexto-enviado-a-cada-agente)). Com mais uma semana, em ordem de valor:
+**Resposta:** com mais uma semana, eu priorizaria melhorar a qualidade da IA do chatbot e comprovar essas melhorias com casos reais:
 
-1. **Avaliar a busca com um modelo de embedding real.** A avaliação atual usa um embedder falso e satura (Recall@5 e MRR@5 = 1,000 antes e depois do re-ranking), então prova que o re-ranking não piora, não que melhora. Eu aumentaria o dataset com consultas mais difíceis e mediria com um modelo real antes de mexer nos pesos.
-2. **Tirar o bcrypt do event loop** (`anyio.to_thread.run_sync`), como expliquei na resposta 1, e um teste de carga simples para comprovar.
-3. **CI (GitHub Actions)** rodando `ruff`, `pytest` (com Postgres e Redis de serviço) e os testes do frontend em cada PR.
-4. **pgvector** no lugar do cosseno em Python, se o número de tarefas por usuário crescer.
-5. **Integração opcional com Google Calendar para tarefas com prazo.** Começaria pela exportação manual de eventos; depois, avaliaria sincronização unidirecional das tarefas para a agenda. Cada usuário autorizaria sua própria conta via OAuth, com permissões mínimas, tokens protegidos e possibilidade de desconectar. Guardaria o vínculo entre tarefa e evento para atualizar prazos sem criar duplicatas. Isso permitiria acompanhar entregas na agenda já utilizada pelo usuário, preservando o isolamento entre contas. A sincronização bidirecional ficaria para uma etapa posterior, pois exige resolver conflitos de edição e exclusão. Esta integração ainda não foi implementada.
-6. **Auditoria de criação de tarefas**, avaliando `BackgroundTasks` para um registro simples. Se fosse necessário garantir a entrega do evento mesmo após falhas do processo, usaria persistência transacional em vez de depender apenas de execução em segundo plano.
+1. **Avaliar o chatbot com uma LLM real.** Os testes com `TestModel` e `FunctionModel` validam o código, mas não provam que o modelo entende bem os pedidos. Criaria casos com mensagens ambíguas, dados ausentes e tentativas de acessar outra conta, verificando a escolha da tool, os argumentos e as perguntas de esclarecimento.
+2. **Melhorar o RAG com evidências.** Aumentaria o dataset com consultas mais difíceis e usaria embeddings reais para comparar Recall@5 e MRR@5 antes e depois do re-ranking. A avaliação atual usa embeddings falsos e já atinge 1,000 nas duas métricas, então não comprova ganho de relevância.
+3. **Aprimorar o contexto das conversas.** Hoje o histórico tem limite de mensagens e TTL no Redis. Avaliaria um limite por tokens e um resumo dos turnos antigos para manter informações úteis sem reenviar toda a conversa. Esse resumo continuaria isolado por usuário e não entraria no RAG de tarefas.
+4. **Medir mudanças de prompt e modelo.** Registraria versão do prompt, modelo, tokens e latência para comparar qualidade e custo. Mudanças seriam avaliadas no mesmo conjunto de casos, incluindo testes de prompt injection e de perguntas quando faltarem informações.
+5. **Google Calendar como extensão posterior.** Começaria por exportação manual de tarefas com prazo e, depois, sincronização unidirecional com OAuth por usuário, tokens protegidos e vínculo tarefa-evento para evitar duplicatas. A sincronização bidirecional ficaria para depois, por exigir tratamento de conflitos e exclusões. A integração ainda não foi implementada.
+
+Também deixaria como melhorias de engenharia tirar o bcrypt do event loop, automatizar os testes em CI e adotar pgvector caso o volume de tarefas justifique. Redis, histórico, busca sobre as próprias tarefas e as tools de leitura já estão implementados; os itens acima são próximos passos, não funcionalidades entregues.
 
 ## Como Executar
 
@@ -413,9 +414,9 @@ A query de busca é título + descrição + departamento da tarefa. Se a recuper
 
 ## Frontend
 
-O frontend (React 19 + TypeScript + Vite, sem router e sem biblioteca de UI ou de estado) é dividido em componentes pequenos: `AppHeader`, `TaskForm`, `TaskFilters`, `TaskList`, `TaskAssistantPanel`, `ChatPanel` e peças de apresentação (`Badge`, `EmptyState`, `ErrorState`, `Skeleton`). O estado fica em `TasksPage`: a lista, os filtros, o usuário logado (`/v1/auth/me`) e a tarefa em análise. Os filhos avisam quando algo mudou e repassam os erros da API, e um 401 sempre leva ao logout num único lugar. Os filtros de status e prioridade viram query params de `GET /v1/tasks/`, aproveitando o cache por filtro do backend; a lista recarrega a cada mudança e descarta respostas atrasadas. O chat consome `POST /v1/chat/stream` (SSE), mostra o texto enquanto chega e atualiza a lista quando o agente cria uma tarefa.
+O frontend (React 19 + TypeScript + Vite, sem router e sem biblioteca de UI ou de estado) é dividido em componentes pequenos: `AppHeader`, `TaskForm`, `TaskFilters`, `TaskList`, `KanbanBoard`, `TaskCalendar`, `TaskAssistantPanel`, `ChatPopup` (que envolve o `ChatPanel`) e peças de apresentação (`Badge`, `EmptyState`, `ErrorState`, `Skeleton`). As tarefas aparecem em três abas — **Lista**, **Kanban** e **Calendário** — e o chat fica num pop-up que abre e fecha. O estado fica em `TasksPage`: a lista, os filtros, o usuário logado (`/v1/auth/me`) e a tarefa em análise. Os filhos avisam quando algo mudou e repassam os erros da API, e um 401 sempre leva ao logout num único lugar. Os filtros de status e prioridade viram query params de `GET /v1/tasks/`, aproveitando o cache por filtro do backend; a lista recarrega a cada mudança e descarta respostas atrasadas. O chat consome `POST /v1/chat/stream` (SSE), mostra o texto enquanto chega e atualiza a lista quando o agente cria uma tarefa — sempre com o filtro e a aba atuais, porque os callbacks chamam o `refresh` mais recente por uma ref.
 
-Testes: `cd frontend && npm test` (Vitest + Testing Library + jsdom, com `fetch` e a API simulados, sem rede). Cobrem o login, os estados de carregando, vazio e erro da lista, os filtros e o processamento dos eventos SSE do chat, inclusive um stream que termina sem `done`.
+Testes: `cd frontend && npm test` (Vitest + Testing Library + jsdom, com `fetch` e a API simulados, sem rede). Cobrem o login, os estados de carregando, vazio e erro da lista, os filtros, as abas, o Kanban (colunas, mover pelo seletor e arrastando, erro ao mover), o pop-up do chat (abrir, fechar, Esc, foco, conversa preservada, aviso de nova resposta) e o processamento dos eventos SSE do chat, inclusive um stream que termina sem `done`.
 
 ## Estrutura do Projeto
 
@@ -448,7 +449,7 @@ frontend/
 └── src/
     ├── api/                 # client.ts (ApiError) · auth · tasks · chat
     ├── pages/               # LoginPage · TasksPage (ponto único de logout em 401)
-    ├── components/          # AppHeader, TaskForm, TaskFilters, TaskList, ChatPanel, TaskAssistantPanel, Badge…
+    ├── components/          # AppHeader, TaskForm, TaskFilters, TaskList, KanbanBoard, TaskCalendar, ChatPopup, ChatPanel, TaskAssistantPanel, Badge…
     ├── test/                # Vitest + Testing Library (login, estados da lista, filtros, chat SSE)
     └── types.ts             # Tipos espelhando os schemas da API
 tests/                       # auth, tasks, isolamento, chat, histórico, cache, assistente, RAG, avaliação
@@ -462,10 +463,24 @@ seed/                        # seed_data.py (idempotente, 2 usuários)
 
 O formulário aceita prazo opcional (`due_date`, no formato `YYYY-MM-DD`, sem
 horário). A visualização Calendário mostra somente tarefas com prazo da lista
-carregada, respeitando os filtros; não representa toda a base quando há mais
-itens que o limite da listagem. A lista continua incluindo tarefas sem prazo.
+carregada, respeitando os filtros. A listagem traz as 100 tarefas mais recentes
+(o máximo da API); acima disso, as mais antigas não aparecem nas abas. A lista continua incluindo tarefas sem prazo.
 O prazo pode ser limpo com `PATCH {"due_date": null}`. Não há integração com
 Google Calendar nem sincronização de eventos nesta entrega.
+
+### Kanban e chat em pop-up (extensão solicitada)
+
+A aba **Kanban** mostra as tarefas em três colunas (Pendente, Em andamento e
+Concluída). Um cartão muda de coluna arrastando-o (drag and drop nativo do
+navegador) ou pelo seletor **Mover para**, que também funciona no teclado e no
+celular. A mudança aparece na hora e vira um `PATCH /v1/tasks/{id}` com o novo
+`status`; se a API recusar, o cartão volta e uma mensagem explica. No Kanban o
+filtro de status some, porque as colunas já são os status; o de prioridade continua.
+
+O chat com a IA fica num **pop-up**: o botão flutuante "Assistente IA", no canto
+inferior direito, abre e fecha a conversa (Esc também fecha) sem perder
+mensagens nem respostas em andamento, e mostra um ponto de "nova resposta"
+quando o agente responde com o chat fechado. No celular o pop-up ocupa a tela.
 
 ### Administração de contas (extensão solicitada)
 
@@ -494,6 +509,13 @@ o escopo original e não introduz organizações ou compartilhamento de tarefas.
 3. Envie o link do repositório.
 
 ### Checklist
+
+O escopo funcional obrigatório do enunciado está implementado. Os testes
+automatizados de IA usam modelos falsos, conforme solicitado; a avaliação de
+qualidade com uma LLM real permanece como próximo passo da pergunta 5.
+
+Verificação em 27/11/2026: 99 testes de backend e 32 de frontend aprovados;
+`ruff check .`, lint do frontend e build de produção sem erros.
 
 - [x] Autenticação JWT (register, login, me)
 - [x] CRUD de tarefas com isolamento por usuário

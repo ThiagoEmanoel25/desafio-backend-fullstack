@@ -50,11 +50,14 @@ h3 { font-size: 0.95rem; margin-bottom: 0.4rem; }
 }
 
 /* Layout */
-.container { max-width: 1180px; margin: 0 auto; padding: 1.5rem; }
+.container { max-width: 1360px; margin: 0 auto; padding: 1.5rem; }
 .stack { display: flex; flex-direction: column; gap: 0.85rem; }
 .row { display: flex; align-items: center; gap: 0.75rem; }
-.grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.25rem; align-items: start; }
-@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+/* One column; on wide screens the form becomes a narrow column and the tasks take the rest. */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+@media (min-width: 1100px) { .grid { grid-template-columns: 340px minmax(0, 1fr); } }
+/* Room below the last task so the floating assistant button never covers it. */
+.container.workspace { padding-bottom: 7rem; }
 .section-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .count { color: var(--muted); font-weight: 500; }
 
@@ -98,7 +101,8 @@ textarea { resize: vertical; min-height: 3.5rem; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
   outline: 3px solid var(--focus); outline-offset: 2px;
 }
-.form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0.75rem; }
+/* The priority select takes its content width, so "Urgente" fits in the narrow form column. */
+.form-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.75rem; }
 .filters { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 .field { display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; color: var(--muted); }
 .field select { padding: 0.35rem 0.5rem; font-size: 0.875rem; }
@@ -159,6 +163,62 @@ button.danger-text:hover { background: #fdecea; color: var(--danger-hover); }
   .field select { flex: 1; }
 }
 
+/* View tabs (Lista / Kanban / Calendário): the button styles, the active tab filled. */
+.view-tabs { flex-wrap: wrap; gap: 0.5rem; }
+.tab-panel[hidden] { display: none; }
+.tab-panel:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 8px; }
+
+/* Kanban: three columns side by side, each as tall as its cards (nothing is cut);
+   on phones only the board scrolls sideways, column by column. */
+.kanban { display: flex; flex-direction: column; gap: 0.75rem; }
+.kanban-board {
+  display: grid; grid-template-columns: repeat(3, minmax(13.5rem, 1fr)); gap: 0.75rem; align-items: start;
+  overflow-x: auto; overscroll-behavior-x: contain;
+}
+/* position: relative contains the absolute .sr-only count, so an off-screen column does not widen the page. */
+.kanban-column {
+  position: relative; display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; padding: 0.75rem;
+  background: #f7f8f4; border: 1px solid var(--border); border-radius: 12px;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.kanban-column.is-over { background: #e8f2ec; border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.kanban-heading { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 0.9rem; }
+.kanban-count {
+  min-width: 1.6rem; padding: 0.05rem 0.45rem; border-radius: 999px; text-align: center;
+  background: #e6e9ee; color: #3d4757; font-size: 0.75rem; font-weight: 700;
+}
+.kanban-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.kanban-card {
+  display: flex; flex-direction: column; gap: 0.45rem; padding: 0.8rem 0.85rem;
+  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid #c3cad5; border-radius: 8px;
+  box-shadow: var(--shadow); cursor: grab; transition: opacity 150ms ease;
+}
+.kanban-card.task-in_progress { border-left-color: var(--primary); }
+.kanban-card.task-completed { border-left-color: #2f8a4c; }
+.kanban-card:active { cursor: grabbing; }
+.kanban-card[aria-busy='true'] { opacity: 0.6; cursor: progress; }
+.kanban-card:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.kanban-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.kanban-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem;
+  padding-top: 0.6rem; border-top: 1px solid #edf0e9;
+}
+.kanban-move { display: flex; align-items: center; gap: 0.4rem; flex: 1 1 11rem; font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+.kanban-move select { flex: 1; min-width: 0; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+.kanban-actions button { min-height: 36px; padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+.kanban-empty {
+  display: grid; place-items: center; min-height: 5.5rem; padding: 1rem;
+  border: 1px dashed #b9c2ce; border-radius: 8px; color: var(--muted); font-size: 0.875rem;
+}
+.kanban-column.is-over .kanban-empty { border-color: var(--primary); color: var(--primary); }
+@media (max-width: 560px) {
+  .kanban-board {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 85%;
+    scroll-snap-type: x mandatory; padding-bottom: 0.5rem;
+  }
+  .kanban-column { scroll-snap-align: start; }
+}
+
 /* Empty / error / loading */
 .empty-state { text-align: center; padding: 2rem 1rem; border: 1px dashed var(--border); border-radius: 8px; }
 .empty-title { font-weight: 600; margin-bottom: 0.25rem; }
@@ -183,12 +243,51 @@ button.danger-text:hover { background: #fdecea; color: var(--danger-hover); }
 .risks li::marker { color: #9a3a00; }
 .questions { background: #fff8e6; border: 1px solid #f5dc94; border-radius: 8px; padding: 0.75rem 1rem; }
 
-/* Chat */
-.chat { position: sticky; top: 1rem; }
-@media (max-width: 900px) { .chat { position: static; } }
+/* Chat: floating button + non-modal popup (ChatPopup wraps ChatPanel) */
+.chat-fab {
+  position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 50;
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  height: 3.25rem; padding: 0 1.3rem 0 1.1rem; border-radius: 999px;
+  box-shadow: 0 10px 24px rgb(16 24 40 / 18%), var(--shadow);
+}
+.chat-fab[aria-expanded='true'] { background: var(--primary-hover); }
+.chat-fab:focus-visible { outline-offset: 3px; }
+.chat-fab svg { flex-shrink: 0; }
+.chat-fab-dot {
+  position: absolute; top: -3px; right: -3px; width: 15px; height: 15px;
+  border-radius: 50%; background: var(--danger); border: 2px solid var(--surface);
+}
+.chat-popup {
+  position: fixed; right: 1.5rem; bottom: 5.5rem; z-index: 50; /* 0.75rem above the button */
+  width: 400px; max-width: calc(100vw - 2rem); height: min(640px, calc(100vh - 7rem));
+  display: flex; flex-direction: column;
+  animation: chat-popup-in 160ms ease-out; transform-origin: bottom right;
+}
+.chat-popup[hidden] { display: none; }
+@keyframes chat-popup-in { from { opacity: 0; transform: translateY(0.5rem) scale(0.98); } }
+/* The log takes the free height and scrolls; the message box stays at the bottom. */
+.chat { flex: 1; min-height: 0; overflow-y: auto; box-shadow: 0 18px 48px rgb(16 24 40 / 18%), var(--shadow); }
+.chat-head { flex-wrap: nowrap; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+.chat-actions { gap: 0.4rem; }
+button.chat-close { width: 40px; padding: 0; font-size: 1.5rem; line-height: 1; }
 .hint { font-size: 0.875rem; }
-.chat-log { max-height: 55vh; overflow-y: auto; }
+.chat-welcome .hint { margin-top: 0.75rem; }
+.chat-log { flex: 1 1 auto; min-height: 4.5rem; overflow-y: auto; overscroll-behavior: contain; }
 .chat-log > li { flex-shrink: 0; }
+.chat textarea { max-height: 9rem; }
+@media (max-width: 560px) {
+  .chat-fab { right: 1rem; bottom: 1rem; width: 3.5rem; height: 3.5rem; padding: 0; justify-content: center; }
+  .chat-fab-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+}
+/* Phones, landscape included: the panel takes the whole screen and hides the button. */
+@media (max-width: 560px), (max-height: 500px) {
+  .chat-fab[aria-expanded='true'] { display: none; }
+  .chat-popup { inset: 0; width: auto; max-width: none; height: auto; }
+  .chat { border: 0; border-radius: 0; box-shadow: none; }
+}
 .bubble { max-width: 88%; padding: 0.55rem 0.85rem; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.925rem; }
 .bubble.user { background: var(--primary); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
 .bubble.agent { background: #eef1f6; align-self: flex-start; border-bottom-left-radius: 4px; }
@@ -198,7 +297,8 @@ button.danger-text:hover { background: #fdecea; color: var(--danger-hover); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .skeleton-row, .dots { animation: none; }
+  .skeleton-row, .dots, .chat-popup { animation: none; }
+  .kanban-column, .kanban-card { transition: none; }
 }
 @media (max-width: 800px) {
   .login { grid-template-columns: 1fr; padding: 1.5rem; gap: 1.5rem; }

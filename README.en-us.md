@@ -351,7 +351,7 @@ frontend/
 └── src/
     ├── api/                 # client.ts (ApiError) · auth · tasks · chat
     ├── pages/               # LoginPage · TasksPage (single 401 logout seam)
-    ├── components/          # AppHeader, TaskForm, TaskFilters, TaskList, ChatPanel, TaskAssistantPanel, Badge…
+    ├── components/          # AppHeader, TaskForm, TaskFilters, TaskList, KanbanBoard, TaskCalendar, ChatPopup, ChatPanel, TaskAssistantPanel, Badge…
     ├── test/                # Vitest + Testing Library (login, list states, filters, SSE chat)
     └── types.ts             # Types mirroring the API schemas
 tests/                       # auth, tasks, isolation, chat, history, cache, assistant, RAG, retrieval eval

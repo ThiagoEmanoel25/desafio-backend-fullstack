@@ -468,7 +468,7 @@ Commits sugeridos:
 - [x] Demonstrar assistência usando tarefas abertas e concluídas relevantes. _(por teste: `tests/test_task_rag.py`; ao vivo só com o modelo de teste)_
 - [x] Atualizar README com arquitetura, decisões, degradações e limites.
 - [x] Incluir credenciais do seed e respostas finais do questionário.
-- [ ] Confirmar que o repositório público executa a partir de um clone limpo. _(pendente: o push ao GitHub está bloqueado, 403)_
+- [ ] Confirmar que o repositório público executa a partir de um clone limpo. _(bloqueado: o push ao GitHub dá 403. Clone limpo **local** da `feature/frontend-polish` verificado: `cp .env.example .env` + `docker compose up --build` sobem os 4 serviços; migration, seed (2x, sem duplicar), login, lista, filtro, assistência, chat em streaming e frontend respondem; dentro dos containers, `ruff` ok, `pytest` 92 passed, `npm test` 11 passed, lint e build ok. Única mudança no `.env`: `REDIS_HOST_PORT`, porque a 6379 está ocupada nesta máquina. Esse teste achou e corrigiu o Node 20 da imagem do frontend, que quebrava o Vitest.)_
 - [ ] Confirmar que nenhum terceiro diferencial foi implementado. _(não vale como escrito: a pedido do Thiago entraram também chat com streaming, filtros na UI e testes de frontend, todos testados e registrados no README)_
 
 ## Definição de pronto

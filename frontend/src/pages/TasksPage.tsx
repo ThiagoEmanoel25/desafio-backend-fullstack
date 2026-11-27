@@ -38,6 +38,7 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
   const [filters, setFilters] = useState<Filters>({})
   const [user, setUser] = useState<User | null>(null)
   const [assistedId, setAssistedId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Task | undefined>()
   // Derived from the list, so a deleted task closes the panel and an edited one stays fresh.
   const assistedTask = tasks.find((t) => t.id === assistedId) ?? null
   const tabsId = useId()
@@ -143,11 +144,11 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
     if (loading) return <Skeleton label="Carregando tarefas…" />
     if (error) return <ErrorState message={error} onRetry={retry} />
     if (view === 'kanban') {
-      return <KanbanBoard tasks={tasks} onChanged={reload} onAssist={assist} onApiError={handleApiError} />
+      return <KanbanBoard tasks={tasks} onChanged={reload} onAssist={assist} onApiError={handleApiError} onEdit={setEditing} />
     }
-    if (view === 'calendar') return <TaskCalendar tasks={tasks} onAssist={assist} />
+    if (view === 'calendar') return <TaskCalendar tasks={tasks} onAssist={assist} onEdit={setEditing} />
     return (
-      <TaskList tasks={tasks} filtered={filtered} onChanged={reload} onAssist={assist} onApiError={handleApiError} />
+      <TaskList tasks={tasks} filtered={filtered} onChanged={reload} onAssist={assist} onApiError={handleApiError} onEdit={setEditing} />
     )
   }
 
@@ -160,7 +161,7 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
             <h1>Clareza para o seu dia.</h1>
             <p className="muted">Organize o que importa. Conte com a IA para dar o próximo passo.</p>
           </div>
-          <a className="quick-create" href="#new-task">+ Nova tarefa</a>
+          <a className="quick-create" href="#new-task" onClick={() => setEditing(undefined)}>+ Nova tarefa</a>
         </div>
         {!loading && !error && <div className="workspace-stats" aria-label="Resumo das tarefas exibidas">
           <div><span>Na lista atual</span><strong>{tasks.length}</strong></div>
@@ -178,7 +179,7 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
         )}
 
         <div className="grid">
-          <TaskForm onCreated={reload} onApiError={handleApiError} />
+          <TaskForm key={editing?.id ?? 'new'} task={editing} onCancel={() => setEditing(undefined)} onCreated={() => { setEditing(undefined); reload() }} onApiError={handleApiError} />
           <section className="card stack">
             <div className="section-head">
               <h2>Tarefas {!loading && !error && <span className="count">({tasks.length})</span>}</h2>

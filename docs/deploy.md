@@ -4,12 +4,16 @@
 
 - Frontend: https://desafio-tarefas-ia.vercel.app (Vercel, publicação pronta).
 - API: https://desafio-tarefas-api.onrender.com (Render, plano free).
-- Fonte do backend: branch `feature/kanban-chat-popup`, commit `f275424`.
+- Fonte do backend: branch `feature/kanban-chat-popup`, commit `ae4a57b`.
+- Frontend atualizado no deployment `dpl_qWVyVP1ALEw2pFc1fdxS9u86mVHQ`.
+- Migration de tags `a7b8c9d0e1f2` aplicada no banco publicado.
 - PostgreSQL 16 e Key Value criados no plano free, região Virginia.
 - PostgreSQL gratuito criado em 27/11/2026, com expiração prevista em 27/12/2026.
 - Verificações públicas aprovadas: health, CORS, cadastro, login, CRUD,
   isolamento entre contas e bloqueio administrativo de usuário comum.
-- Há uma conta de avaliação e uma conta auxiliar de teste no banco publicado.
+- Atualização verificada na API pública: criar/editar/limpar tags e cores,
+  limpar prazo, duplicar dados, invalidar cache e rejeitar cor inválida.
+- Há uma conta de avaliação e contas auxiliares de teste no banco publicado.
   Credenciais não são armazenadas neste documento nem no repositório.
 - IA real ainda pendente de configurar `OPENAI_API_KEY` e trocar `LLM_MODEL`
   no painel do Render. A publicação inicial usa `test`, sem consumo da OpenAI.

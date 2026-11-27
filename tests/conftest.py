@@ -11,6 +11,10 @@ with PydanticAI's `TestModel` / `FunctionModel` instead.
 """
 
 import asyncio
+import fcntl
+import hashlib
+import os
+import tempfile
 from collections.abc import AsyncGenerator, Iterator
 
 import fakeredis
@@ -65,8 +69,16 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> fakeredis.FakeAsyncRedis:
 
 @pytest.fixture(scope="session", autouse=True)
 def _test_schema() -> Iterator[None]:
-    """Create all tables before the suite and drop them after it."""
+    """Create all tables before the suite and drop them after it.
+
+    The suite owns the whole test database, so two runs at the same time would
+    truncate and drop each other's rows. A per-database lock file makes a second
+    run on this machine wait for the first one instead.
+    """
     url = _test_database_url()
+    digest = hashlib.sha256(url.encode()).hexdigest()[:16]
+    lock = open(os.path.join(tempfile.gettempdir(), f"pytest-db-{digest}.lock"), "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
 
     async def run(drop: bool) -> None:
         engine = create_async_engine(url, poolclass=NullPool)
@@ -76,9 +88,13 @@ def _test_schema() -> Iterator[None]:
                 await conn.run_sync(Base.metadata.create_all)
         await engine.dispose()
 
-    asyncio.run(run(drop=False))
-    yield
-    asyncio.run(run(drop=True))
+    try:
+        asyncio.run(run(drop=False))
+        yield
+        asyncio.run(run(drop=True))
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        lock.close()
 
 
 @pytest.fixture

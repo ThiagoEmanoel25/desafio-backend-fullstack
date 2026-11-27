@@ -6,6 +6,14 @@ import type { Task } from '../types'
 interface ChatPanelProps {
   onTaskCreated: (task: Task) => void
   onApiError: (err: unknown) => boolean
+  /** Called when a reply finishes (`done`), e.g. to flag it while the popup is closed. */
+  onReply?: () => void
+  /** Shows a close (×) button in the header. */
+  onClose?: () => void
+  /** id for the "Assistente IA" heading, so a wrapping dialog can be labelled by it. */
+  titleId?: string
+  /** Set by a popup: turning true focuses the message box and shows the newest message. */
+  open?: boolean
 }
 
 interface Message {
@@ -15,7 +23,14 @@ interface Message {
 
 const UNAVAILABLE = 'O assistente está indisponível agora.'
 
-export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps) {
+export default function ChatPanel({
+  onTaskCreated,
+  onApiError,
+  onReply,
+  onClose,
+  titleId,
+  open,
+}: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -23,12 +38,18 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const logRef = useRef<HTMLUListElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Keep the newest message visible while the reply streams in.
+  // Keep the newest message visible while the reply streams in, and again when the
+  // popup reopens: a hidden log loses its scroll position.
   useEffect(() => {
     const log = logRef.current
     if (log) log.scrollTop = log.scrollHeight
-  }, [messages])
+  }, [messages, open])
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus()
+  }, [open])
 
   // Replace the text of the last (agent) bubble.
   function setAgentText(update: (text: string) => string) {
@@ -59,6 +80,7 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
           setConversationId(ev.conversation_id)
           setAgentText(() => ev.reply)
           if (ev.created_task) onTaskCreated(ev.created_task)
+          onReply?.()
         } else {
           failed = true
           setError(UNAVAILABLE)
@@ -100,26 +122,34 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
   }
 
   return (
-    <aside className="card stack chat">
-      <div className="section-head">
-        <h2>Assistente IA</h2>
-        <button
-          type="button"
-          className="secondary"
-          onClick={newConversation}
-          disabled={thinking || messages.length === 0}
-        >
-          Nova conversa
-        </button>
+    <div className="card stack chat">
+      <div className="section-head chat-head">
+        <h2 id={titleId}>Assistente IA</h2>
+        <div className="row chat-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={newConversation}
+            disabled={thinking || messages.length === 0}
+          >
+            Nova conversa
+          </button>
+          {onClose && (
+            <button type="button" className="ghost chat-close" aria-label="Fechar assistente" onClick={onClose}>
+              <span aria-hidden="true">×</span>
+            </button>
+          )}
+        </div>
       </div>
-      <p className="muted hint">
-        Ex.: “Cadastre uma tarefa urgente chamada ‘Revisar relatório financeiro’ para o
-        departamento Comercial” ou “Quais tarefas urgentes eu tenho?”
-      </p>
       <ul ref={logRef} className="chat-log" aria-live="polite">
+        {/* The examples live in the welcome, inside the log: the popup's height goes to the messages. */}
         {messages.length === 0 && <li className="chat-welcome"><span aria-hidden="true">✦</span>
           <h3>Vamos tirar uma ideia do papel?</h3>
           <p>Posso criar tarefas, consultar suas prioridades e encontrar trabalhos parecidos.</p>
+          <p className="hint">
+            Ex.: “Cadastre uma tarefa urgente chamada ‘Revisar relatório financeiro’ para o
+            departamento Comercial” ou “Quais tarefas urgentes eu tenho?”
+          </p>
         </li>}
         {messages.map((m, i) =>
           m.text ? (
@@ -139,6 +169,7 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
       {error && <p className="error" role="alert">{error}</p>}
       <form onSubmit={handleSubmit} className="stack">
         <textarea
+          ref={inputRef}
           aria-label="Mensagem para o assistente"
           placeholder="Escreva uma mensagem"
           value={input}
@@ -150,6 +181,6 @@ export default function ChatPanel({ onTaskCreated, onApiError }: ChatPanelProps)
           {thinking ? 'Respondendo…' : 'Enviar'}
         </button>
       </form>
-    </aside>
+    </div>
   )
 }

@@ -1,11 +1,13 @@
 import { apiFetch } from './client'
 import type { Task, TaskAssistance, TaskCreate, TaskFilters, TaskUpdate } from '../types'
 
-// Empty filters are left out, so "Todos" lists everything.
-export async function listTasks(filters: TaskFilters = {}): Promise<Task[]> {
+// Empty filters are left out, so "Todos" lists everything. Without `limit` the API
+// sends 20 tasks; it accepts up to 100.
+export async function listTasks(filters: TaskFilters = {}, limit?: number): Promise<Task[]> {
   const params = new URLSearchParams()
   if (filters.status) params.set('status', filters.status)
   if (filters.priority) params.set('priority', filters.priority)
+  if (limit) params.set('limit', String(limit))
   const query = params.toString()
   return apiFetch<Task[]>(`/v1/tasks/${query ? `?${query}` : ''}`)
 }

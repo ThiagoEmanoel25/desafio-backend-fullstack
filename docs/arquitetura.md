@@ -4,6 +4,14 @@ Documento baseado na implementação verificada em 27/11/2026. Explica o que
 existe, por que foi escolhido e quais limites ainda temos. O [README](../README.md)
 contém o enunciado e os comandos; o [TASKS](../TASKS.md) registra a evolução.
 
+Aplicação publicada:
+
+- [Frontend na Vercel](https://desafio-tarefas-ia.vercel.app)
+- [API no Render](https://desafio-tarefas-api.onrender.com)
+- [Documentação interativa da API (Swagger)](https://desafio-tarefas-api.onrender.com/docs)
+
+Os detalhes de configuração e operação estão no [guia de deploy](deploy.md).
+
 ## 1. Visão geral
 
 O produto é um gerenciador de tarefas com dois usos de IA: criar tarefas por

@@ -1,5 +1,8 @@
 """The chat agent: turns a natural-language message into a task via a tool."""
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from pydantic_ai import Agent, Tool
 
 from app.agent.deps import AgentDeps
@@ -18,3 +21,9 @@ agent = Agent(
         Tool(search_task_memory, sequential=True),
     ],
 )
+
+
+@agent.instructions
+def calendar_context() -> str:
+    today = datetime.now(ZoneInfo("America/Bahia")).date()
+    return f"Today's date is {today.isoformat()} in America/Bahia."

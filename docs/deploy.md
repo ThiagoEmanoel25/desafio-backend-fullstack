@@ -15,8 +15,12 @@
   limpar prazo, duplicar dados, invalidar cache e rejeitar cor inválida.
 - Há uma conta de avaliação e contas auxiliares de teste no banco publicado.
   Credenciais não são armazenadas neste documento nem no repositório.
-- IA real ainda pendente de configurar `OPENAI_API_KEY` e trocar `LLM_MODEL`
-  no painel do Render. A publicação inicial usa `test`, sem consumo da OpenAI.
+- IA real ativa com `openai:gpt-4.1-mini`. Smoke test público aprovado em
+  27/11/2026: streaming pede o departamento ausente e a tool cria uma tarefa
+  com prioridade urgente no Comercial. A tarefa descartável foi removida.
+- Foi corrigida uma quebra de linha nas extremidades de `OPENAI_API_KEY` no
+  Render, que causava `ModelConnectionError`. Nenhum valor de segredo foi
+  incluído em logs ou neste documento. A publicação inicial usava `test`.
 
 O deploy efetivo usa o `Dockerfile` da raiz, cujo comando já aplica migrations
 e respeita `PORT`. O `Dockerfile.render` é a alternativa que instala apenas as
@@ -180,6 +184,11 @@ exponha um endpoint público de promoção a administrador.
 Se aparecer `503`, confira o tipo de erro no log: acesso ao modelo, chave,
 faturamento e limite do provedor são causas diferentes. Não exponha a exceção
 bruta na resposta ao navegador.
+
+Ao copiar `OPENAI_API_KEY`, não inclua aspas, espaços ou quebras de linha.
+Uma quebra de linha pode tornar o cabeçalho de autenticação inválido e aparecer
+como erro de conexão antes de a requisição chegar ao provedor. Corrija a variável
+no painel e faça redeploy; não imprima a chave para investigar.
 
 ## Referências
 

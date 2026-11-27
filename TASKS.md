@@ -29,8 +29,9 @@ obrigatório.
       de produção e confirmar a importação da API sem chamada ao provedor.
 - [x] Publicar frontend na Vercel, API e datastores gratuitos no Render.
 - [x] Verificar health, CORS, cadastro, login, CRUD e isolamento na API pública.
-- [ ] Configurar a chave OpenAI apenas no Render e ativar o modelo real.
-- [ ] Executar smoke test com modelo real nas URLs publicadas.
+- [x] Configurar a chave OpenAI apenas no Render e ativar o modelo real.
+- [x] Executar smoke test com modelo real nas URLs publicadas: streaming,
+      pergunta sobre departamento ausente e criação pela tool, com limpeza da tarefa.
 
 Extensão solicitada: prazo opcional (`due_date`, data sem horário) e calendário
 mensal contendo somente tarefas com prazo da lista carregada e seus filtros.

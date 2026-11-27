@@ -1,5 +1,6 @@
 """Tools the chat agent can call. `user_id` is read only from `ctx.deps`."""
 
+from datetime import date
 from typing import Annotated
 
 from pydantic import Field, ValidationError
@@ -27,6 +28,7 @@ async def create_task_tool(
     ],
     priority: TaskPriority = TaskPriority.medium,
     description: Annotated[str | None, Field(max_length=DESCRIPTION_MAX)] = None,
+    due_date: date | None = None,
 ) -> dict:
     """Create a new task owned by the current user.
 
@@ -36,6 +38,7 @@ async def create_task_tool(
             exactly as the user named it. Never invent one.
         priority: One of low, medium, high, urgent.
         description: Optional details, up to 2000 characters.
+        due_date: Deadline in YYYY-MM-DD format, only when requested by the user.
     """
     try:
         data = TaskCreate(
@@ -43,6 +46,7 @@ async def create_task_tool(
             department=department,
             priority=priority,
             description=description,
+            due_date=due_date,
         )
     except ValidationError as exc:
         # Safety net: input that passes the Field limits above but fails TaskCreate.
@@ -55,6 +59,7 @@ async def create_task_tool(
         "title": task.title,
         "priority": task.priority,
         "department": task.department,
+        "due_date": task.due_date.isoformat() if task.due_date else None,
     }
 
 

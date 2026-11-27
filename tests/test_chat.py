@@ -1,7 +1,9 @@
 """Chat agent tests. Every run goes through TestModel / FunctionModel: no network."""
 
 import inspect
+from datetime import date
 
+import pytest
 from httpx import AsyncClient
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -100,6 +102,29 @@ async def test_chat_reference_message_creates_expected_task(
     assert body["created_task"]["title"] == "Revisar relatório financeiro"
     assert body["created_task"]["priority"] == "urgent"
     assert body["created_task"]["department"] == "Comercial"
+
+
+@pytest.mark.parametrize("deadline", ["2026-12-05", None])
+async def test_chat_preserves_deadline_in_database_response_and_task_list(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    auth_headers: dict[str, str],
+    deadline: str | None,
+):
+    args = {**REFERENCE_ARGS, "due_date": deadline}
+    with agent.override(model=_calls_tool(args)):
+        response = await async_client.post(
+            "/v1/chat", json={"message": REFERENCE}, headers=auth_headers
+        )
+    assert response.status_code == 200
+    created = response.json()["created_task"]
+    assert created["due_date"] == deadline
+    (task,) = await _tasks(db_session)
+    assert task.due_date == (date.fromisoformat(deadline) if deadline else None)
+    listing = await async_client.get("/v1/tasks/", headers=auth_headers)
+    assert listing.status_code == 200
+    listed = next(t for t in listing.json() if t["id"] == created["id"])
+    assert listed["due_date"] == deadline
 
 
 async def test_tool_rejects_model_supplied_user_id(

@@ -157,31 +157,31 @@ Answer in your own words, short and to the point. There is no single right answe
 
 What is the difference between declaring a route with `async def` and with `def` in FastAPI? In which situation can `async def` **hurt** performance?
 
-**Answer:** _TODO_
+**Answer:** written in Portuguese in the main README: [answer](README.md#1-async-no-fastapi).
 
 ### 2. Agent flow
 
 Describe, step by step, what happens from the moment the user sends the chat message until the task is saved in the database. Where does Pydantic validation come in?
 
-**Answer:** _TODO_
+**Answer:** written in Portuguese in the main README: [answer](README.md#2-fluxo-do-agente).
 
 ### 3. Assistant context
 
 What information did you send to the LLM in the task assistant, and what did you decide to leave out? How does that choice affect answer quality, cost (tokens) and user privacy?
 
-**Answer:** _TODO_
+**Answer:** written in Portuguese in the main README: [answer](README.md#3-contexto-do-assistente).
 
 ### 4. Security with AI
 
 Why must the `user_id` used by the tool come from the request context (`ctx.deps`) and not from a parameter filled in by the LLM? What could go wrong in the second case?
 
-**Answer:** _TODO_
+**Answer:** written in Portuguese in the main README: [answer](README.md#4-segurança-com-ia).
 
 ### 5. Next steps
 
 If you had one more week, what would you improve or add to the project, and why?
 
-**Answer:** _TODO_
+**Answer:** written in Portuguese in the main README: [answer](README.md#5-próximos-passos).
 
 ## How to Run
 
@@ -358,15 +358,27 @@ seed/                        # seed_data.py (idempotent, 2 users)
 
 ### Checklist
 
-- [ ] JWT authentication (register, login, me)
-- [ ] Task CRUD with per-user isolation
-- [ ] Alembic migration
-- [ ] PydanticAI agent with the `create_task` tool
-- [ ] Task assistant with structured output and context explained in the README
-- [ ] Frontend: login, list, create, actions, chat and AI help
-- [ ] Automated tests (including chat and assistant with `TestModel`)
-- [ ] Structured logs
-- [ ] Seed with documented credentials
-- [ ] Questionnaire answered
+- [x] JWT authentication (register, login, me)
+- [x] Task CRUD with per-user isolation
+- [x] Alembic migration
+- [x] PydanticAI agent with the `create_task` tool
+- [x] Task assistant with structured output and context explained in the README
+- [x] Frontend: login, list, create, actions, chat and AI help
+- [x] Automated tests (including chat and assistant with `TestModel`)
+- [x] Structured logs
+- [x] Seed with documented credentials
+- [x] Questionnaire answered
+
+Nice to have:
+
+- [x] `list_tasks` tool (and `search_task_memory`)
+- [x] Assistant evaluation cache (Redis)
+- [x] Conversation history (`message_history` in Redis) and streaming chat
+- [x] List filters (`status`, `priority`, `skip`/`limit`)
+- [x] Redis cache for the task list, with invalidation
+- [x] Frontend tests (Vitest + Testing Library)
+- [ ] `BackgroundTasks` audit log
+- [ ] React Query or a state manager
+- [ ] CI pipeline
 
 Good luck! 🚀

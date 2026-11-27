@@ -129,6 +129,8 @@ Não avaliamos design. Avaliamos **consumo da API, gerenciamento de estado e org
 
 Só faça estes itens depois de concluir o obrigatório. Eles **não são necessários** para ser aprovado.
 
+> **Feitos neste projeto:** tool `list_tasks`, cache da avaliação, histórico da conversa, filtros na listagem, Redis como cache da listagem, testes no frontend e chat com streaming. Também foi feito um diferencial próprio, a busca nas tarefas do usuário (RAG). Ficaram de fora: `BackgroundTasks`, React Query e CI.
+
 - Tool extra no agente, por exemplo `list_tasks` (*"quais são minhas tarefas urgentes?"*).
 - Cache da avaliação do assistente, para não chamar a LLM de novo enquanto a tarefa não mudar.
 - Perguntas de acompanhamento sobre a mesma tarefa, mantendo o histórico da conversa (`message_history`).
@@ -184,6 +186,8 @@ Descreva, passo a passo, o que acontece desde o momento em que o usuário envia 
 9. Terminada a run, a rota lê a tarefa criada (o flush já populou os defaults), faz **um** `commit` e devolve `ChatResponse(reply=..., created_task=...)`, serializado por `response_model`.
 10. Qualquer exceção no caminho (provedor fora do ar, estouro de `UsageLimits`, erro na tool, falha no commit) faz `rollback`, loga `chat_agent_failed` com o tipo do erro e responde **503** com um detalhe fixo — uma run que falhou não deixa tarefa pela metade no banco.
 
+Com os diferenciais, dois detalhes entram nesse fluxo: antes do passo 4 a rota carrega do Redis o histórico da conversa (`chat:{user_id}:{conversation_id}`, nunca enviado pelo cliente) e o passa como `message_history`; depois do commit ela salva a conversa de volta e invalida o cache da lista. `POST /v1/chat/stream` segue os mesmos passos, mas entrega o texto em eventos SSE enquanto o modelo gera, e o commit continua único, só depois de o run terminar.
+
 Os dois pontos que o desafio pede estão nos passos 3 e 6/7: o Pydantic valida o que **o usuário** enviou e, depois, o que **o modelo** gerou. O segundo é o que importa para segurança: a saída de uma LLM é entrada não confiável.
 
 ### 3. Contexto do assistente
@@ -192,15 +196,20 @@ Quais informações você enviou à LLM no assistente de tarefas e o que decidiu
 
 **Resposta:**
 
-O modelo recebe o prompt fixo e, por requisição, **a tarefa em análise**: título, descrição (ou um "não informada" explícito), departamento, status e prioridade. O texto livre vai dentro de um bloco `<task>` que o prompt declara ser texto da tarefa, nunca instrução, e os sinais `<` e `>` são substituídos nesses campos para que ninguém consiga forjar ou fechar a tag.
+O modelo recebe o prompt fixo e, por requisição, **a tarefa em análise**: título, descrição (ou um "não informada" explícito), departamento, status e prioridade. O texto livre vai dentro de um bloco `<task>` que o prompt declara ser dado, nunca instrução, e os sinais `<` e `>` são substituídos nesses campos para que ninguém consiga forjar ou fechar a tag.
 
-Junto vão **no máximo 5 outras tarefas abertas do mesmo usuário e do mesmo departamento**, reduzidas a título, status e prioridade, dentro de um bloco delimitado e rotulado como dado, nunca instrução.
+Junto vão dois conjuntos curtos, recuperados por relevância **só entre as tarefas do próprio usuário** (busca híbrida + re-ranking, ver [Índice de busca](#índice-de-busca-das-tarefas-busca-híbrida)):
 
-Ficam de fora: descrição das tarefas relacionadas, ids, `user_id`, timestamps, tarefas concluídas, outros departamentos e qualquer dado de outro usuário.
+- `<related_tasks>`: **até 5 tarefas abertas** relacionadas — o que está na mesa agora;
+- `<completed_tasks>`: **até 5 tarefas concluídas** parecidas — como um trabalho semelhante foi feito antes (memória episódica).
 
-- **Qualidade:** só o título das relacionadas já basta como pano de fundo para estimar esforço e discutir prioridade ("tenho mais três coisas abertas no mesmo departamento"). Mandar as descrições inteiras acrescentaria ruído e faria o modelo falar das tarefas erradas.
-- **Custo:** o prompt tem tamanho previsível — uma tarefa completa e cinco linhas curtas. O corte de 5 e todos os filtros estão **no SQL** (`list_open_in_department`), não em Python, então o banco nunca devolve mais do que vai para o prompt.
-- **Privacidade:** quanto menos texto pessoal sai do sistema, melhor. A tarefa é carregada por `user_id` **mais** `task_id` e as relacionadas são filtradas por `user_id` na própria query, então uma tarefa de outro usuário é recusada com **404 antes de qualquer chamada ao modelo**.
+Cada item vai reduzido a `[task_id] título | status | prioridade | departamento`. Se a busca falhar, o assistente volta às abertas do mesmo departamento e segue funcionando.
+
+Ficam de fora: descrição das tarefas relacionadas, `user_id`, timestamps, e-mail, hash de senha, mensagens do chat e qualquer dado de outro usuário.
+
+- **Qualidade:** as abertas dão o pano de fundo para discutir prioridade ("há mais três coisas abertas no mesmo tema"); as concluídas ajudam a estimar esforço com base no que o usuário já fez. Só títulos e metadados bastam para isso; descrições inteiras trariam ruído.
+- **Custo:** o prompt tem tamanho previsível — uma tarefa completa e no máximo dez linhas curtas. Os cortes (20 candidatos por canal, 5 por conjunto) acontecem antes de montar o prompt. O resultado fica em cache no Redis enquanto nem a tarefa nem as outras tarefas do usuário mudarem, então clicar de novo em "Pedir ajuda à IA" não paga outra chamada.
+- **Privacidade:** a tarefa é carregada por `user_id` **mais** `task_id` e a busca filtra por `user_id` **no SQL**, então uma tarefa de outro usuário é recusada com **404 antes de qualquer chamada ao modelo**, e nenhum dado alheio entra no contexto.
 
 ### 4. Segurança com IA
 
@@ -220,13 +229,13 @@ Isso está fixado por teste em [tests/test_chat.py](tests/test_chat.py): `test_t
 
 Se você tivesse mais uma semana, o que melhoraria ou adicionaria no projeto? Por quê?
 
-**Resposta:** nada do que está abaixo está implementado — é o que eu faria em seguida, em ordem de valor:
+**Resposta:** os três primeiros itens que eu tinha listado aqui — Redis (cache da lista e da avaliação, histórico de chat limitado), recuperação sobre as tarefas do próprio usuário e a tool `list_tasks` — **foram implementados** como diferenciais (ver [Índice de busca](#índice-de-busca-das-tarefas-busca-híbrida) e [Contexto enviado a cada agente](#contexto-enviado-a-cada-agente)). Com mais uma semana, em ordem de valor:
 
-1. **Redis como cache de leitura, com histórico de chat limitado.** Cache da listagem de tarefas por usuário, invalidado em criação/edição/exclusão, e cache da avaliação do assistente com chave derivada da tarefa (invalidada quando a tarefa muda), porque hoje cada clique em "Pedir ajuda à IA" paga uma chamada de LLM inteira para uma tarefa que não mudou. No mesmo conjunto entra o `message_history` da PydanticAI guardado por usuário com **janela limitada** (as últimas N mensagens, com TTL), para permitir perguntas de acompanhamento sem deixar o prompt crescer sem teto. Redis seria só cache, nunca fonte da verdade.
-2. **Recuperação sobre as tarefas do próprio usuário.** Hoje o contexto complementar é uma query fixa (até 5 abertas do mesmo departamento). Eu trocaria por uma busca por relevância em cima do texto das tarefas do usuário, com dois papéis distintos: as **abertas** como contexto atual (o que está na mesa agora) e as **concluídas** como memória episódica (como ele resolveu algo parecido antes, útil para estimar esforço). Sempre filtrado por `user_id` no SQL e com o mesmo teto de itens.
-3. **Tool `list_tasks` no agente do chat**, para perguntas como *"quais são minhas tarefas urgentes?"* — a infraestrutura de isolamento já está pronta, falta só a tool de leitura.
-4. **Tirar o bcrypt do event loop** (`anyio.to_thread.run_sync`), como expliquei na resposta 1, e um teste de carga simples para comprovar.
-5. **CI (GitHub Actions)** rodando `ruff` + `pytest` com Postgres de serviço, e alguns testes de frontend (Vitest) nas telas de login e lista — hoje a garantia do frontend é só `tsc` + build.
+1. **Avaliar a busca com um modelo de embedding real.** A avaliação atual usa um embedder falso e satura (Recall@5 e MRR@5 = 1,000 antes e depois do re-ranking), então prova que o re-ranking não piora, não que melhora. Eu aumentaria o dataset com consultas mais difíceis e mediria com um modelo real antes de mexer nos pesos.
+2. **Tirar o bcrypt do event loop** (`anyio.to_thread.run_sync`), como expliquei na resposta 1, e um teste de carga simples para comprovar.
+3. **CI (GitHub Actions)** rodando `ruff`, `pytest` (com Postgres e Redis de serviço) e os testes do frontend em cada PR.
+4. **pgvector** no lugar do cosseno em Python, se o número de tarefas por usuário crescer.
+5. **`BackgroundTasks` para log de auditoria** na criação de tarefa, o único diferencial do README que ficou de fora.
 
 ## Como Executar
 
@@ -416,6 +425,12 @@ A query de busca é título + descrição + departamento da tarefa. Se a recuper
 - **Sem organizações/times/RBAC:** o isolamento é por usuário, com `user_id`. Não existe `tenant_id`.
 - **O assistente não persiste nada no banco:** a avaliação fica só no cache Redis, e mensagens ou respostas da IA nunca entram no índice de busca.
 
+## Frontend
+
+O frontend (React 19 + TypeScript + Vite, sem router e sem biblioteca de UI ou de estado) é dividido em componentes pequenos: `AppHeader`, `TaskForm`, `TaskFilters`, `TaskList`, `TaskAssistantPanel`, `ChatPanel` e peças de apresentação (`Badge`, `EmptyState`, `ErrorState`, `Skeleton`). O estado fica em `TasksPage`: a lista, os filtros, o usuário logado (`/v1/auth/me`) e a tarefa em análise. Os filhos avisam quando algo mudou e repassam os erros da API, e um 401 sempre leva ao logout num único lugar. Os filtros de status e prioridade viram query params de `GET /v1/tasks/`, aproveitando o cache por filtro do backend; a lista recarrega a cada mudança e descarta respostas atrasadas. O chat consome `POST /v1/chat/stream` (SSE), mostra o texto enquanto chega e atualiza a lista quando o agente cria uma tarefa.
+
+Testes: `cd frontend && npm test` (Vitest + Testing Library + jsdom, com `fetch` e a API simulados, sem rede). Cobrem o login, os estados de carregando, vazio e erro da lista, os filtros e o processamento dos eventos SSE do chat, inclusive um stream que termina sem `done`.
+
 ## Estrutura do Projeto
 
 ```
@@ -430,15 +445,17 @@ app/
 ├── core/
 │   ├── database.py          # AsyncEngine e session factory
 │   ├── security.py          # JWT e hash de senha (bcrypt)
+│   ├── cache.py             # Redis best-effort (falha = cache miss, nunca derruba a API)
 │   └── logging.py           # setup_logging() + JsonFormatter
-├── models/                  # User · Task (SQLAlchemy 2.0, Mapped[...])
+├── models/                  # User · Task · TaskSearchIndex (SQLAlchemy 2.0, Mapped[...])
 ├── schemas/                 # auth · task · chat · assistance (Pydantic v2)
 ├── repositories/            # Queries, sempre com user_id
-├── services/                # task_service · task_assistant_service
+├── services/                # task_service · task_assistant_service · task_retrieval (busca híbrida + re-ranking)
 └── agent/
-    ├── agent.py             # Agente do chat (tool create_task)
+    ├── agent.py             # Agente do chat (create_task, list_tasks, search_task_memory)
+    ├── history.py           # Histórico do chat no Redis, limitado e com TTL
     ├── task_assistant.py    # Assistente, output_type=TaskAssistance
-    ├── tools.py             # create_task_tool (user_id vem de ctx.deps)
+    ├── tools.py             # Tools do chat (user_id sempre de ctx.deps)
     ├── prompts.py           # Prompts fixos dos dois agentes
     └── deps.py              # AgentDeps · AssistantDeps · exceções 503
 frontend/
@@ -447,7 +464,8 @@ frontend/
     ├── pages/               # LoginPage · TasksPage (ponto único de logout em 401)
     ├── components/          # TaskForm, TaskList, ChatPanel, TaskAssistantPanel
     └── types.ts             # Tipos espelhando os schemas da API
-tests/                       # conftest + auth, tasks, isolamento, chat, assistente, logging
+tests/                       # auth, tasks, isolamento, chat, histórico, cache, assistente, RAG, avaliação
+docs/                        # retrieval-eval.md (Recall@5 / MRR@5)
 seed/                        # seed_data.py (idempotente, 2 usuários)
 ```
 
@@ -472,5 +490,17 @@ seed/                        # seed_data.py (idempotente, 2 usuários)
 - [x] Logs estruturados
 - [x] Seed com credenciais documentadas
 - [x] Questionário respondido
+
+Diferenciais:
+
+- [x] Tool `list_tasks` (e `search_task_memory`)
+- [x] Cache da avaliação do assistente (Redis)
+- [x] Histórico da conversa (`message_history` no Redis) e chat com streaming
+- [x] Filtros na listagem (`status`, `priority`, `skip`/`limit`)
+- [x] Redis como cache da listagem, com invalidação
+- [x] Testes no frontend (Vitest + Testing Library)
+- [ ] `BackgroundTasks` para log de auditoria
+- [ ] React Query ou gerenciador de estado
+- [ ] Pipeline de CI
 
 Boa sorte! 🚀

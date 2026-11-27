@@ -10,6 +10,22 @@ obrigatório.
 
 ## Contrato de escopo
 
+Extensão solicitada: prazo opcional (`due_date`, data sem horário) e calendário
+mensal contendo somente tarefas com prazo da lista carregada e seus filtros.
+O campo pode ser removido via PATCH com null. Google Calendar permanece fora
+da implementação: OAuth por usuário, armazenamento seguro de tokens, revogação,
+vínculo tarefa-evento e sincronização ampliam o escopo do desafio.
+
+### Revisão de resiliência e interface
+
+- [x] Isolar retrieval opcional com savepoint e testar erro SQL real.
+- [x] Exigir perguntas de esclarecimento quando não houver descrição.
+- [x] Versionar a chave do cache de assistência para descartar respostas antigas.
+- [x] Melhorar login, hierarquia do workspace, resumo da lista, formulário e chat.
+- [x] Verificar 97 testes backend, 11 frontend, lint e build.
+- [ ] Inspecionar visualmente as telas no navegador.
+- [ ] Validar interpretação e perguntas com um provedor LLM real.
+
 ### Fechamento da entrega com administração
 
 - [x] Integrar e publicar a implementação na `main` do fork.

@@ -58,6 +58,7 @@ export default function TaskList({ tasks, filtered, onChanged, onAssist, onApiEr
                   <Badge tone={task.priority}>{PRIORITY_LABEL[task.priority]}</Badge>
                   <Badge tone={task.status}>{STATUS_LABEL[task.status]}</Badge>
                   <span className="muted">{task.department}</span>
+                  {task.due_date && <time dateTime={task.due_date}>Prazo: {task.due_date.split('-').reverse().join('/')}</time>}
                 </div>
               </div>
               <div className="task-actions">

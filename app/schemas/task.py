@@ -7,7 +7,7 @@ extracted by the LLM, so its length limits apply to both entry points.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -39,6 +39,7 @@ class TaskCreate(BaseModel):
     """Payload to create a task (from the API or from the agent tool)."""
 
     title: str = Field(min_length=TITLE_MIN, max_length=TITLE_MAX)
+    due_date: date | None = None
     description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
     priority: TaskPriority = TaskPriority.medium
     department: str = Field(min_length=DEPARTMENT_MIN, max_length=DEPARTMENT_MAX)
@@ -48,6 +49,7 @@ class TaskUpdate(BaseModel):
     """Partial update payload: only the fields that are sent are changed."""
 
     title: str | None = Field(default=None, min_length=3, max_length=200)
+    due_date: date | None = None
     description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
@@ -68,6 +70,7 @@ class TaskResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    due_date: date | None = None
     title: str
     description: str | None
     status: TaskStatus

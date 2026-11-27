@@ -4,7 +4,7 @@ The static prompt lives in prompts.py; the task and its related tasks arrive per
 run through the dynamic instructions below.
 """
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, ModelRetry, RunContext
 
 from app.agent.deps import AssistantDeps
 from app.agent.prompts import TASK_ASSISTANT_PROMPT
@@ -18,6 +18,22 @@ task_assistant = Agent(
     output_type=TaskAssistance,
     instructions=TASK_ASSISTANT_PROMPT,
 )
+
+
+@task_assistant.output_validator
+def require_missing_information_questions(
+    ctx: RunContext[AssistantDeps], output: TaskAssistance
+) -> TaskAssistance:
+    """Do not accept a confident plan when essential context is absent."""
+    if (
+        not (ctx.deps.task.description or "").strip()
+        and not output.clarifying_questions
+    ):
+        raise ModelRetry(
+            "The description is missing. Acknowledge this in the summary and "
+            "provide at least one clarifying question before assuming details."
+        )
+    return output
 
 
 def _defang(text: str) -> str:

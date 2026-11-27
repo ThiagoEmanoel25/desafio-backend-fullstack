@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../api/client'
 import { createTask } from '../api/tasks'
+import { PRIORITY_LABEL } from '../labels'
 import type { Task, TaskPriority } from '../types'
 
 interface TaskFormProps {
@@ -45,7 +46,7 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
   }
 
   return (
-    <section className="card">
+    <section className="card stack">
       <h2>Nova tarefa</h2>
       <form onSubmit={handleSubmit} className="stack">
         <input
@@ -62,16 +63,17 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <div className="row">
+        <div className="form-row">
           <select
             aria-label="Prioridade"
             value={priority}
             onChange={(e) => setPriority(e.target.value as TaskPriority)}
           >
-            <option value="low">Baixa</option>
-            <option value="medium">Média</option>
-            <option value="high">Alta</option>
-            <option value="urgent">Urgente</option>
+            {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
           <input
             aria-label="Departamento"
@@ -81,7 +83,7 @@ export default function TaskForm({ onCreated, onApiError }: TaskFormProps) {
             required
           />
         </div>
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? 'Criando…' : 'Criar tarefa'}
         </button>

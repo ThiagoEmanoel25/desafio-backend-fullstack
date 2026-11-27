@@ -51,3 +51,15 @@ export interface TaskAssistance {
   risks: string[]
   clarifying_questions: string[]
 }
+
+export interface TaskFilters {
+  status?: TaskStatus | ''
+  priority?: TaskPriority | ''
+}
+
+export interface User {
+  id: string
+  email: string
+  full_name: string
+  created_at: string
+}

@@ -30,9 +30,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   }
 
   return (
-    <main className="container narrow">
-      <h1>Entrar</h1>
-      <form onSubmit={handleSubmit} className="stack">
+    <main className="login">
+      <form onSubmit={handleSubmit} className="card stack login-card">
+        <div>
+          <p className="brand">Tarefas IA</p>
+          <h1>Entrar</h1>
+          <p className="muted">Gerencie suas tarefas com ajuda de um assistente.</p>
+        </div>
         <input
           type="email"
           aria-label="E-mail"
@@ -49,7 +53,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" disabled={loading}>
           {loading ? 'Entrando…' : 'Entrar'}
         </button>

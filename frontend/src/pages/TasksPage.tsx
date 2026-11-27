@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
+import { getCurrentUser } from '../api/auth'
 import { listTasks } from '../api/tasks'
+import AppHeader from '../components/AppHeader'
 import ChatPanel from '../components/ChatPanel'
 import TaskAssistantPanel from '../components/TaskAssistantPanel'
+import ErrorState from '../components/ErrorState'
+import Skeleton from '../components/Skeleton'
+import TaskFilters from '../components/TaskFilters'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
-import type { Task } from '../types'
+import type { Task, TaskFilters as Filters, User } from '../types'
 
 interface TasksPageProps {
   onLogout: () => void
@@ -16,6 +21,8 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<Filters>({})
+  const [user, setUser] = useState<User | null>(null)
   const [assistedId, setAssistedId] = useState<string | null>(null)
   // Derived from the list, so a deleted task closes the panel and an edited one stays fresh.
   const assistedTask = tasks.find((t) => t.id === assistedId) ?? null
@@ -37,65 +44,90 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
     return false
   }, [])
 
+  // Only the latest request may write the list, so a slow response for an old
+  // filter cannot overwrite the one the user picked after it.
+  const requestId = useRef(0)
   const refresh = useCallback(async () => {
+    const id = ++requestId.current
     try {
-      setTasks(await listTasks())
+      const data = await listTasks(filters)
+      if (id !== requestId.current) return
+      setTasks(data)
       setError(null)
     } catch (err) {
+      if (id !== requestId.current) return
       if (!handleApiError(err)) setError('Não foi possível carregar as tarefas.')
     } finally {
-      setLoading(false)
+      if (id === requestId.current) setLoading(false)
     }
-  }, [handleApiError])
+  }, [filters, handleApiError])
 
+  // Runs on mount and every time a filter changes (refresh depends on filters).
   useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- initial fetch; state is set after await
+    // oxlint-disable-next-line react/set-state-in-effect -- fetch; state is set after await
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(setUser)
+      .catch((err) => handleApiError(err)) // without the name the header shows only "Sair"
+  }, [handleApiError])
+
+  function changeFilters(next: Filters) {
+    setLoading(true)
+    setFilters(next)
+  }
 
   function retry() {
     setLoading(true)
     void refresh()
   }
 
+  const filtered = Boolean(filters.status || filters.priority)
+
   return (
-    <main className="container">
-      <header className="row between">
+    <>
+      <AppHeader user={user} onLogout={onLogout} />
+      <main className="container">
         <h1>Minhas tarefas</h1>
-        <button onClick={onLogout}>Sair</button>
-      </header>
 
-      <div className="grid">
-        <section className="stack">
-          <TaskForm onCreated={() => void refresh()} onApiError={handleApiError} />
-          {loading ? (
-            <p className="muted">Carregando tarefas…</p>
-          ) : error ? (
-            <div className="card stack">
-              <p className="error">{error}</p>
-              <button onClick={retry}>Tentar novamente</button>
-            </div>
-          ) : (
-            <TaskList
-              tasks={tasks}
-              onChanged={() => void refresh()}
-              onAssist={(task) => setAssistedId(task.id)}
-              onApiError={handleApiError}
-            />
-          )}
-        </section>
+        {assistedTask && (
+          <TaskAssistantPanel
+            key={assistedTask.id}
+            task={assistedTask}
+            onClose={() => setAssistedId(null)}
+            onApiError={handleApiError}
+          />
+        )}
 
-        <ChatPanel onTaskCreated={() => void refresh()} onApiError={handleApiError} />
-      </div>
+        <div className="grid">
+          <div className="stack">
+            <TaskForm onCreated={() => void refresh()} onApiError={handleApiError} />
+            <section className="card stack">
+              <div className="section-head">
+                <h2>Tarefas {!loading && !error && <span className="count">({tasks.length})</span>}</h2>
+                <TaskFilters value={filters} onChange={changeFilters} />
+              </div>
+              {loading ? (
+                <Skeleton label="Carregando tarefas…" />
+              ) : error ? (
+                <ErrorState message={error} onRetry={retry} />
+              ) : (
+                <TaskList
+                  tasks={tasks}
+                  filtered={filtered}
+                  onChanged={() => void refresh()}
+                  onAssist={(task) => setAssistedId(task.id)}
+                  onApiError={handleApiError}
+                />
+              )}
+            </section>
+          </div>
 
-      {assistedTask && (
-        <TaskAssistantPanel
-          key={assistedTask.id}
-          task={assistedTask}
-          onClose={() => setAssistedId(null)}
-          onApiError={handleApiError}
-        />
-      )}
-    </main>
+          <ChatPanel onTaskCreated={() => void refresh()} onApiError={handleApiError} />
+        </div>
+      </main>
+    </>
   )
 }

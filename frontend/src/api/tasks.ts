@@ -1,8 +1,13 @@
 import { apiFetch } from './client'
-import type { Task, TaskAssistance, TaskCreate, TaskUpdate } from '../types'
+import type { Task, TaskAssistance, TaskCreate, TaskFilters, TaskUpdate } from '../types'
 
-export async function listTasks(): Promise<Task[]> {
-  return apiFetch<Task[]>('/v1/tasks/')
+// Empty filters are left out, so "Todos" lists everything.
+export async function listTasks(filters: TaskFilters = {}): Promise<Task[]> {
+  const params = new URLSearchParams()
+  if (filters.status) params.set('status', filters.status)
+  if (filters.priority) params.set('priority', filters.priority)
+  const query = params.toString()
+  return apiFetch<Task[]>(`/v1/tasks/${query ? `?${query}` : ''}`)
 }
 
 export async function createTask(data: TaskCreate): Promise<Task> {

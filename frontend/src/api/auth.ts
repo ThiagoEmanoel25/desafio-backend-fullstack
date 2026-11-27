@@ -1,5 +1,5 @@
 import { apiFetch, tokenStorage } from './client'
-import type { TokenResponse } from '../types'
+import type { TokenResponse, User } from '../types'
 
 export async function login(email: string, password: string): Promise<void> {
   // OAuth2PasswordRequestForm: form data, e-mail goes in `username`.
@@ -16,4 +16,8 @@ export function logout(): void {
 
 export function isAuthenticated(): boolean {
   return tokenStorage.get() !== null
+}
+
+export async function getCurrentUser(): Promise<User> {
+  return apiFetch<User>('/v1/auth/me')
 }

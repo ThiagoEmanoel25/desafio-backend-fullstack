@@ -16,6 +16,16 @@ export async function createTask(data: TaskCreate): Promise<Task> {
   return apiFetch<Task>('/v1/tasks/', { method: 'POST', body: JSON.stringify(data) })
 }
 
+export async function duplicateTask(task: Task): Promise<Task> {
+  // A new owner-scoped POST gives it a new id and resets status to pending.
+  return createTask({
+    title: `${Array.from(task.title).slice(0, 192).join('')} (cópia)`,
+    description: task.description, priority: task.priority,
+    department: task.department, due_date: task.due_date ?? null,
+    tags: task.tags ?? [],
+  })
+}
+
 export async function updateTask(id: string, data: TaskUpdate): Promise<Task> {
   return apiFetch<Task>(`/v1/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
 }

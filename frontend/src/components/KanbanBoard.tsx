@@ -4,8 +4,10 @@ import { updateTask } from '../api/tasks'
 import { PRIORITY_LABEL, STATUS_LABEL } from '../labels'
 import type { Task, TaskStatus } from '../types'
 import Badge from './Badge'
+import TaskTags from './TaskTags'
 
 interface KanbanBoardProps {
+  onEdit?: (task: Task) => void
   tasks: Task[]
   /** Called after a move is saved, so the parent reloads the tasks. */
   onChanged: () => void
@@ -26,7 +28,7 @@ interface Move {
 }
 
 /** The tasks in one column per status; a card moves by drag and drop or by its "Mover para" select. */
-export default function KanbanBoard({ tasks, onChanged, onAssist, onApiError }: KanbanBoardProps) {
+export default function KanbanBoard({ tasks, onChanged, onAssist, onApiError, onEdit }: KanbanBoardProps) {
   const [moves, setMoves] = useState<Record<string, Move>>({})
   const [movesBase, setMovesBase] = useState(tasks)
   const [draggedId, setDraggedId] = useState<string | null>(null)
@@ -166,6 +168,7 @@ export default function KanbanBoard({ tasks, onChanged, onAssist, onApiError }: 
                         onDragEnd={endDrag}
                       >
                         <strong className="task-title">{task.title}</strong>
+                        <TaskTags tags={task.tags} />
                         <div className="task-meta">
                           <Badge tone={task.priority}>{PRIORITY_LABEL[task.priority]}</Badge>
                           <span className="muted">{task.department}</span>
@@ -175,6 +178,7 @@ export default function KanbanBoard({ tasks, onChanged, onAssist, onApiError }: 
                         </div>
                         {task.description && <p className="task-desc kanban-desc">{task.description}</p>}
                         <div className="kanban-actions">
+                          {onEdit && <button className="secondary" disabled={saving} onClick={() => onEdit(task)}>Editar</button>}
                           <label className="kanban-move">
                             <span aria-hidden="true">Mover para</span>
                             <select

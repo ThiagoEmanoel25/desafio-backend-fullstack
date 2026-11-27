@@ -4,7 +4,10 @@
 export type TaskStatus = 'pending' | 'in_progress' | 'completed'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
+export interface TaskTag { name: string; color: string }
+
 export interface Task {
+  tags?: TaskTag[]
   due_date?: string | null
   id: string
   title: string
@@ -17,6 +20,7 @@ export interface Task {
 }
 
 export interface TaskCreate {
+  tags?: TaskTag[]
   due_date?: string | null
   title: string
   description?: string | null

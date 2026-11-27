@@ -463,7 +463,26 @@ seed/                        # seed_data.py (idempotente, 2 usuários)
 
 ## Entrega
 
-### Calendário de tarefas (extensão solicitada)
+### Edição, duplicação, lote e tags (extensão solicitada)
+
+O formulário também edita título, descrição, departamento, prioridade, status e
+prazo, incluindo remover o prazo. A ação Editar está disponível na lista e no
+Kanban; no calendário, clicar na tarefa abre o editor. Duplicar reaproveita os
+dados editáveis e as tags, com novo ID e status pendente.
+
+Na lista, selecione tarefas para concluir ou excluir em lote. A exclusão exige
+confirmação. As ações usam as mesmas rotas autenticadas, uma requisição por tarefa;
+não formam uma transação única. Falhas parciais são informadas e não desfazem
+operações já concluídas. A seleção se limita às tarefas exibidas.
+
+Cada tarefa aceita até oito tags com nome de até 30 caracteres e cor hexadecimal
+escolhida no formulário. A primeira tag define a cor do evento no calendário;
+as demais aparecem como etiquetas. O texto usa preto ou branco conforme o
+contraste. Remover todas as tags restaura a cor padrão. Tags são metadados da
+própria tarefa e seguem seu isolamento por usuário; não existe catálogo global
+de tags, nem uso delas pelo RAG nesta versão.
+
+### Calendário de tarefas e prazo opcional (extensão solicitada)
 
 O formulário aceita prazo opcional (`due_date`, no formato `YYYY-MM-DD`, sem
 horário). A visualização Calendário mostra somente tarefas com prazo da lista
@@ -518,7 +537,7 @@ O escopo funcional obrigatório do enunciado está implementado. Os testes
 automatizados de IA usam modelos falsos, conforme solicitado; a avaliação de
 qualidade com uma LLM real permanece como próximo passo da pergunta 5.
 
-Verificação em 27/11/2026: 106 testes de backend e 32 de frontend aprovados;
+Verificação em 27/11/2026: 114 testes de backend e 40 de frontend aprovados;
 `ruff check .`, lint do frontend e build de produção sem erros.
 
 - [x] Autenticação JWT (register, login, me)

@@ -10,6 +10,17 @@ obrigatório.
 
 ## Contrato de escopo
 
+### Deploy de demonstração autorizado
+
+- [x] Preparar frontend na Vercel e Dockerfile específico para Render.
+- [x] Guardar quotas diárias no PostgreSQL: 10 por usuário, 50 globais por padrão.
+- [x] Bloquear IA se a quota não puder ser verificada e responder 429 ao esgotar.
+- [x] Aplicar limites de saída e preservar cache hits sem cobrança de quota.
+- [x] Verificar 106 testes backend, 32 frontend, lint e build; construir a imagem
+      de produção e confirmar a importação da API sem chamada ao provedor.
+- [ ] Publicar os serviços gratuitos e configurar a chave apenas no Render.
+- [ ] Executar smoke test com modelo real nas URLs publicadas.
+
 Extensão solicitada: prazo opcional (`due_date`, data sem horário) e calendário
 mensal contendo somente tarefas com prazo da lista carregada e seus filtros.
 O campo pode ser removido via PATCH com null. Google Calendar permanece fora

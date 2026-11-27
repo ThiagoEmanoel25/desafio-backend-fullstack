@@ -2,6 +2,10 @@
 
 > 🇺🇸 English version: [README.en-us.md](README.en-us.md)
 
+> [Arquitetura, decisões e diagramas](docs/arquitetura.md)
+
+> [Deploy de demonstração: Vercel + Render e quotas de IA](docs/deploy.md)
+
 ## Objetivo
 
 Você vai construir um **gerenciador de tarefas com assistente de IA**: cada usuário faz login, gerencia as próprias tarefas por uma interface React, pode pedir a um agente de IA, em linguagem natural, que cadastre tarefas por ele, e pode pedir à IA que **avalie uma tarefa e monte um plano para executá-la**.
@@ -514,7 +518,7 @@ O escopo funcional obrigatório do enunciado está implementado. Os testes
 automatizados de IA usam modelos falsos, conforme solicitado; a avaliação de
 qualidade com uma LLM real permanece como próximo passo da pergunta 5.
 
-Verificação em 27/11/2026: 99 testes de backend e 32 de frontend aprovados;
+Verificação em 27/11/2026: 106 testes de backend e 32 de frontend aprovados;
 `ruff check .`, lint do frontend e build de produção sem erros.
 
 - [x] Autenticação JWT (register, login, me)

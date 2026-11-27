@@ -33,7 +33,9 @@ export default function TaskAssistantPanel({ task, onClose, onApiError }: TaskAs
       .catch((err) => {
         if (ignore || onApiError(err)) return
         setError(
-          err instanceof ApiError && err.status === 503
+          err instanceof ApiError && err.status === 429
+            ? 'Limite diário de IA atingido. Tente novamente amanhã (UTC).'
+            : err instanceof ApiError && err.status === 503
             ? 'O assistente está indisponível agora.'
             : 'Não foi possível obter a ajuda da IA.',
         )

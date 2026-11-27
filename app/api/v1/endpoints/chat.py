@@ -23,7 +23,9 @@ from app.agent import history
 from app.agent.agent import agent
 from app.agent.deps import AgentDeps, ChatUnavailableError
 from app.api.deps import get_current_user, get_db
+from app.config import settings
 from app.core import cache
+from app.core.ai_quota import reserve_ai
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.task import TaskResponse
@@ -95,6 +97,7 @@ async def chat(
 
     A provider error or usage-limit breach answers 503 and leaves nothing behind.
     """
+    await reserve_ai(db, current_user.id)
     conversation_id = request.conversation_id or uuid.uuid4()
     deps = AgentDeps(db=db, user_id=current_user.id)
     started = time.perf_counter()
@@ -105,6 +108,7 @@ async def chat(
             deps=deps,
             message_history=past,
             usage_limits=USAGE_LIMITS,
+            model_settings={"max_tokens": settings.AI_MAX_OUTPUT_TOKENS},
         )
         created_task = await _created_task(db, deps)
         await db.commit()
@@ -142,8 +146,10 @@ async def chat_stream(
     request: ChatRequest,
     http_request: Request,
     current_user: User = Depends(get_current_user),
+    quota_db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Events: `meta`, then `delta`s, then `done` (or `error`), as `data: <json>`."""
+    await reserve_ai(quota_db, current_user.id)
     conversation_id = request.conversation_id or uuid.uuid4()
     user_id = current_user.id
     # The request-scoped session may close before the body is streamed, so the
@@ -171,6 +177,7 @@ async def chat_stream(
                     deps=deps,
                     message_history=past,
                     usage_limits=USAGE_LIMITS,
+                    model_settings={"max_tokens": settings.AI_MAX_OUTPUT_TOKENS},
                 ) as stream:
                     async for event in stream:
                         if isinstance(event, AgentRunResultEvent):

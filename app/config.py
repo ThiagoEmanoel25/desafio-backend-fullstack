@@ -1,5 +1,6 @@
 """Application settings loaded from environment variables."""
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,6 +45,11 @@ class Settings(BaseSettings):
     #   "openai:<model-name>"     -> OpenAI (requires OPENAI_API_KEY)
     # Provider API keys are read directly from the environment by PydanticAI.
     LLM_MODEL: str = "test"
+    # Always enforced in production; opt in locally to exercise the guard.
+    AI_LIMITS_ENABLED: bool = False
+    AI_USER_DAILY_LIMIT: int = Field(default=10, ge=1)
+    AI_GLOBAL_DAILY_LIMIT: int = Field(default=50, ge=1)
+    AI_MAX_OUTPUT_TOKENS: int = Field(default=800, ge=100, le=4000)
 
     # Task search index (hybrid retrieval). Any PydanticAI embedding model
     # string, e.g. "openai:text-embedding-3-small". Empty or "none" disables

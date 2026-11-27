@@ -10,6 +10,7 @@ import Skeleton from '../components/Skeleton'
 import TaskFilters from '../components/TaskFilters'
 import TaskForm from '../components/TaskForm'
 import TaskList from '../components/TaskList'
+import TaskCalendar from '../components/TaskCalendar'
 import type { Task, TaskFilters as Filters, User } from '../types'
 
 interface TasksPageProps {
@@ -19,6 +20,7 @@ interface TasksPageProps {
 /** Main page: owns the task list; children report mutations and API errors back. */
 export default function TasksPage({ onLogout }: TasksPageProps) {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [view, setView] = useState('list')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<Filters>({})
@@ -90,7 +92,18 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
     <>
       <AppHeader user={user} onLogout={onLogout} />
       <main className="container">
-        <h1>Minhas tarefas</h1>
+        <div className="workspace-heading">
+          <div><p className="eyebrow">Seu espaço de trabalho</p>
+            <h1>Clareza para o seu dia.</h1>
+            <p className="muted">Organize o que importa. Conte com a IA para dar o próximo passo.</p>
+          </div>
+          <a className="quick-create" href="#new-task">+ Nova tarefa</a>
+        </div>
+        {!loading && !error && <div className="workspace-stats" aria-label="Resumo das tarefas exibidas">
+          <div><span>Na lista atual</span><strong>{tasks.length}</strong></div>
+          <div><span>Em andamento</span><strong>{tasks.filter(t => t.status === 'in_progress').length}</strong></div>
+          <div><span>Concluídas</span><strong>{tasks.filter(t => t.status === 'completed').length}</strong></div>
+        </div>}
 
         {assistedTask && (
           <TaskAssistantPanel
@@ -113,7 +126,12 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
                 <Skeleton label="Carregando tarefas…" />
               ) : error ? (
                 <ErrorState message={error} onRetry={retry} />
-              ) : (
+              ) : <>
+                <div className="row" aria-label="Visualização das tarefas">
+                  <button className={view === 'list' ? '' : 'secondary'} aria-pressed={view === 'list'} onClick={() => setView('list')}>Lista</button>
+                  <button className={view === 'calendar' ? '' : 'secondary'} aria-pressed={view === 'calendar'} onClick={() => setView('calendar')}>Calendário</button>
+                </div>
+                {view === 'calendar' ? <TaskCalendar tasks={tasks} onAssist={task => setAssistedId(task.id)} /> : (
                 <TaskList
                   tasks={tasks}
                   filtered={filtered}
@@ -121,7 +139,8 @@ export default function TasksPage({ onLogout }: TasksPageProps) {
                   onAssist={(task) => setAssistedId(task.id)}
                   onApiError={handleApiError}
                 />
-              )}
+                )}
+              </>}
             </section>
           </div>
 

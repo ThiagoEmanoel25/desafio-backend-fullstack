@@ -48,7 +48,7 @@ def _assistance_model(calls: list[int]) -> FunctionModel:
         "priority_reason": "Deadline is close",
         "steps": ["Collect data"],
         "risks": [],
-        "clarifying_questions": [],
+        "clarifying_questions": ["What is the expected deadline?"],
     }
 
     def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:

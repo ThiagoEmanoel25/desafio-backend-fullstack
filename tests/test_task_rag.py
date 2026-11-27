@@ -161,7 +161,11 @@ async def test_assist_cache_invalidated_when_another_task_changes(
 ):
     created = await async_client.post(
         "/v1/tasks/",
-        json={"title": "Fechar mês", "department": "Fin"},
+        json={
+            "title": "Fechar mês",
+            "department": "Fin",
+            "description": "Conferir o mês.",
+        },
         headers=auth_headers,
     )
     url = f"/v1/tasks/{created.json()['id']}/assist"

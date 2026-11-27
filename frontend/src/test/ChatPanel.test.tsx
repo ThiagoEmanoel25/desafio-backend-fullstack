@@ -34,11 +34,13 @@ describe('ChatPanel', () => {
       { type: 'done', reply: 'Tarefa criada!', created_task: task, conversation_id: 'c1' },
     ])
     const onTaskCreated = vi.fn()
-    render(<ChatPanel onTaskCreated={onTaskCreated} onApiError={() => false} />)
+    const onReply = vi.fn()
+    render(<ChatPanel onTaskCreated={onTaskCreated} onApiError={() => false} onReply={onReply} />)
     await send('crie uma tarefa')
     expect(await screen.findByText('Tarefa criada!')).toBeInTheDocument()
     expect(screen.getByText('crie uma tarefa')).toBeInTheDocument()
     expect(onTaskCreated).toHaveBeenCalledWith(task)
+    expect(onReply).toHaveBeenCalledTimes(1)
     expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
       message: 'crie uma tarefa',
       conversation_id: null,
@@ -47,9 +49,11 @@ describe('ChatPanel', () => {
 
   it('shows a message on an error event', async () => {
     mockStream([{ type: 'meta', conversation_id: 'c1' }, { type: 'error', detail: 'x' }])
-    render(<ChatPanel onTaskCreated={vi.fn()} onApiError={() => false} />)
+    const onReply = vi.fn()
+    render(<ChatPanel onTaskCreated={vi.fn()} onApiError={() => false} onReply={onReply} />)
     await send('oi')
     expect(await screen.findByRole('alert')).toHaveTextContent('O assistente está indisponível agora.')
+    expect(onReply).not.toHaveBeenCalled()
   })
 
   it('shows an error when the stream ends without done', async () => {

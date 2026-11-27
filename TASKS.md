@@ -10,6 +10,15 @@ obrigatório.
 
 ## Contrato de escopo
 
+### Extensão autorizada: CRUD e cores do calendário
+
+- [x] Editar campos completos e adicionar/remover prazo pelo formulário.
+- [x] Duplicar dados e tags, com novo ID e status pendente.
+- [x] Concluir/excluir a seleção da lista, com confirmação e falhas parciais.
+- [x] Persistir tags por tarefa e validar nome, cor hexadecimal e quantidade.
+- [x] Usar a primeira tag na cor do calendário e texto com contraste calculado.
+- [x] Testar edição, duplicação, confirmação, parcialidade, validação e isolamento.
+
 ### Deploy de demonstração autorizado
 
 - [x] Preparar frontend na Vercel e Dockerfile específico para Render.
@@ -18,7 +27,9 @@ obrigatório.
 - [x] Aplicar limites de saída e preservar cache hits sem cobrança de quota.
 - [x] Verificar 106 testes backend, 32 frontend, lint e build; construir a imagem
       de produção e confirmar a importação da API sem chamada ao provedor.
-- [ ] Publicar os serviços gratuitos e configurar a chave apenas no Render.
+- [x] Publicar frontend na Vercel, API e datastores gratuitos no Render.
+- [x] Verificar health, CORS, cadastro, login, CRUD e isolamento na API pública.
+- [ ] Configurar a chave OpenAI apenas no Render e ativar o modelo real.
 - [ ] Executar smoke test com modelo real nas URLs publicadas.
 
 Extensão solicitada: prazo opcional (`due_date`, data sem horário) e calendário

@@ -21,6 +21,20 @@
 }
 
 * { box-sizing: border-box; }
+.task-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.form-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.task-tags:empty { display: none; }
+.task-tag { display: inline-block; border-radius: 6px; padding: 0.15rem 0.45rem; font-size: 0.7rem; font-weight: 600; overflow-wrap: anywhere; }
+.tag-editor { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; }
+.tag-editor legend { font-size: 0.8rem; font-weight: 600; }
+.tag-editor-row { flex-wrap: wrap; }
+.tag-editor-row input:not([type=color]) { min-width: 0; flex: 1 1 100px; width: 100px; }
+.tag-editor-row input[type=color] { width: 42px; height: 42px; padding: 3px; cursor: pointer; }
+.bulk-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0.7rem; background: #f5f7f2; border-radius: 10px; font-size: 0.8rem; }
+.bulk-toolbar button { font-size: 0.8rem; }
+.calendar-entry { margin-top: 0.3rem; }
+.calendar-entry .task-tags { margin-top: 0.25rem; }
+.calendar-entry .task-tag { font-size: 0.6rem; padding: 0.1rem 0.2rem; }
 .calendar-scroll { overflow-x: auto; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(75px, 1fr)); min-width: 540px; gap: 4px; }
 .calendar-grid > strong { text-align: center; font-size: 0.75rem; color: var(--muted); padding: 0.5rem; }

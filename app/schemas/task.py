@@ -35,11 +35,21 @@ DESCRIPTION_MAX = 2000
 DEPARTMENT_MIN, DEPARTMENT_MAX = 2, 100
 
 
+class TaskTag(BaseModel):
+    """A task-local label; colors are restricted to CSS hex values."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    name: str = Field(min_length=1, max_length=30)
+    color: str = Field(default="#186451", pattern=r"^#[0-9a-fA-F]{6}$")
+
+
 class TaskCreate(BaseModel):
     """Payload to create a task (from the API or from the agent tool)."""
 
     title: str = Field(min_length=TITLE_MIN, max_length=TITLE_MAX)
     due_date: date | None = None
+    tags: list[TaskTag] = Field(default_factory=list, max_length=8)
     description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
     priority: TaskPriority = TaskPriority.medium
     department: str = Field(min_length=DEPARTMENT_MIN, max_length=DEPARTMENT_MAX)
@@ -50,6 +60,7 @@ class TaskUpdate(BaseModel):
 
     title: str | None = Field(default=None, min_length=3, max_length=200)
     due_date: date | None = None
+    tags: list[TaskTag] = Field(default_factory=list, max_length=8)
     description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
@@ -71,6 +82,7 @@ class TaskResponse(BaseModel):
 
     id: uuid.UUID
     due_date: date | None = None
+    tags: list[TaskTag] = Field(default_factory=list)
     title: str
     description: str | None
     status: TaskStatus

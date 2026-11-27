@@ -1,7 +1,23 @@
 # Deploy de demonstração: Vercel e Render
 
-Configuração preparada; a criação dos serviços depende das contas de hospedagem
-e da escolha dos planos. Este documento não significa que o deploy já foi feito.
+## Estado da publicação em 27/11/2026
+
+- Frontend: https://desafio-tarefas-ia.vercel.app (Vercel, publicação pronta).
+- API: https://desafio-tarefas-api.onrender.com (Render, plano free).
+- Fonte do backend: branch `feature/kanban-chat-popup`, commit `f275424`.
+- PostgreSQL 16 e Key Value criados no plano free, região Virginia.
+- PostgreSQL gratuito criado em 27/11/2026, com expiração prevista em 27/12/2026.
+- Verificações públicas aprovadas: health, CORS, cadastro, login, CRUD,
+  isolamento entre contas e bloqueio administrativo de usuário comum.
+- Há uma conta de avaliação e uma conta auxiliar de teste no banco publicado.
+  Credenciais não são armazenadas neste documento nem no repositório.
+- IA real ainda pendente de configurar `OPENAI_API_KEY` e trocar `LLM_MODEL`
+  no painel do Render. A publicação inicial usa `test`, sem consumo da OpenAI.
+
+O deploy efetivo usa o `Dockerfile` da raiz, cujo comando já aplica migrations
+e respeita `PORT`. O `Dockerfile.render` é a alternativa que instala apenas as
+dependências de runtime. Ambos iniciam sem reload; o Compose local mantém seu
+comando de desenvolvimento próprio.
 
 ## Topologia
 
@@ -37,7 +53,7 @@ Crie um Web Service a partir do fork público, branch de entrega:
 | Repositório | `ThiagoEmanoel25/desafio-backend-fullstack` |
 | Runtime | Docker |
 | Root directory | Raiz do repositório |
-| Dockerfile path | `Dockerfile.render` |
+| Dockerfile path | `Dockerfile` na publicação atual; `Dockerfile.render` como alternativa |
 | Health check | `/health` |
 | Quantidade de instâncias inicial | Uma |
 

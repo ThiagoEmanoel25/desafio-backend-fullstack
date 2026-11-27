@@ -298,8 +298,9 @@ O seed é **idempotente**: ele procura o usuário pelo e-mail e a tarefa por `(u
 ### Localmente (sem Docker para a API)
 
 ```bash
-# 1. Suba apenas o banco (fica exposto em localhost:5433)
-docker compose up db -d --wait
+# 1. Suba só o banco e o Redis (localhost:5433 e localhost:6379;
+#    mude com POSTGRES_HOST_PORT / REDIS_HOST_PORT se a porta estiver ocupada)
+docker compose up db redis -d --wait
 
 # 2. Crie o banco de testes (uma vez só)
 docker compose exec db createdb -U app desafio_test
@@ -313,6 +314,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 #    (não edite o .env — veja a nota abaixo)
 export DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio
 export TEST_DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio_test
+export REDIS_URL=redis://localhost:6379/0   # a porta de REDIS_HOST_PORT, se você mudou
 export PYDANTIC_AI_NO_BANNER=1
 
 # 5. Migration, seed e API
@@ -321,9 +323,9 @@ python -m seed.seed_data
 uvicorn app.main:app --reload
 ```
 
-**Por que exportar em vez de editar o `.env`:** o `.env` é o arquivo que o `docker compose` entrega ao container, e lá dentro o banco se chama `db:5432`. Se você trocar o `DATABASE_URL` do `.env` para `localhost:5433`, o container da API para de achar o banco. Variável de ambiente ganha do `.env` no `pydantic-settings`, então exportar na shell resolve o caso local sem quebrar o caso Docker, e o mesmo `.env` serve para os dois: `DATABASE_URL` é o banco da aplicação (`desafio`) e `TEST_DATABASE_URL` é o banco exclusivo da suíte (`desafio_test`).
+**Por que exportar em vez de editar o `.env`:** o `.env` é o arquivo que o `docker compose` entrega ao container, e lá dentro o banco se chama `db:5432`. Se você trocar o `DATABASE_URL` do `.env` para `localhost:5433`, o container da API para de achar o banco. Variável de ambiente ganha do `.env` no `pydantic-settings`, então exportar na shell resolve o caso local sem quebrar o caso Docker, e o mesmo `.env` serve para os dois: `DATABASE_URL` é o banco da aplicação (`desafio`) e `TEST_DATABASE_URL` é o banco exclusivo da suíte (`desafio_test`). O `REDIS_URL` segue a mesma regra (`redis:6379` dentro do Docker, `localhost` fora). Sem ele a API funciona, mas sem cache e sem histórico do chat, e registra `cache_degraded` no log.
 
-Para não repetir isso toda vez, salve as três linhas em um arquivo `.dev-env.sh` (ele está no `.gitignore`, é só para a sua máquina) e use `source .dev-env.sh` antes de `pytest`, `alembic`, `uvicorn` e do seed.
+Para não repetir isso toda vez, salve essas linhas `export` em um arquivo `.dev-env.sh` (ele está no `.gitignore`, é só para a sua máquina) e use `source .dev-env.sh` antes de `pytest`, `alembic`, `uvicorn` e do seed.
 
 Frontend:
 
@@ -342,6 +344,9 @@ Entre com uma das credenciais do seed e você já cai na lista de tarefas, com o
 export TEST_DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio_test
 pytest -v
 ruff check .
+
+# frontend
+cd frontend && npm test
 ```
 
 O banco `desafio_test` precisa existir (`docker compose exec db createdb -U app desafio_test`, uma vez só).
@@ -349,6 +354,8 @@ O banco `desafio_test` precisa existir (`docker compose exec db createdb -U app 
 - **Banco separado.** A suíte roda em `desafio_test`, nunca no banco da aplicação — [tests/conftest.py](tests/conftest.py) aborta na hora se `TEST_DATABASE_URL` estiver vazio **ou** igual a `DATABASE_URL`, porque ele apaga as tabelas no fim. As tabelas são criadas uma vez por sessão com `Base.metadata.create_all`, derrubadas no fim, e **truncadas depois de cada teste**, então nenhuma linha vaza de um teste para o outro.
 - **A mesma sessão em todo lugar.** `app.dependency_overrides[get_db]` devolve exatamente a `AsyncSession` que o teste usa para asserção, então o teste vê o que a requisição escreveu sem precisar de commit.
 - **Nenhum teste chega a uma LLM real.** Uma fixture `autouse` força `pydantic_ai.models.ALLOW_MODEL_REQUESTS = False` durante toda a suíte. Quem esquecer de um `agent.override(model=...)` **falha com erro**, em vez de sair pela rede e gastar token. Os testes usam `TestModel` ou `FunctionModel` conforme o caso.
+- **Sem Redis real.** Cada teste recebe um `fakeredis` novo e vazio; o Redis de verdade nunca é tocado, e a queda do Redis é testada com uma conexão real para uma porta fechada.
+- **Uma suíte por vez.** Duas execuções ao mesmo tempo no mesmo `desafio_test` apagariam as linhas uma da outra; um lock de arquivo no `conftest.py` faz a segunda esperar a primeira terminar.
 
 ## Índice de busca das tarefas (busca híbrida)
 
@@ -462,7 +469,8 @@ frontend/
 └── src/
     ├── api/                 # client.ts (ApiError) · auth · tasks · chat
     ├── pages/               # LoginPage · TasksPage (ponto único de logout em 401)
-    ├── components/          # TaskForm, TaskList, ChatPanel, TaskAssistantPanel
+    ├── components/          # AppHeader, TaskForm, TaskFilters, TaskList, ChatPanel, TaskAssistantPanel, Badge…
+    ├── test/                # Vitest + Testing Library (login, estados da lista, filtros, chat SSE)
     └── types.ts             # Tipos espelhando os schemas da API
 tests/                       # auth, tasks, isolamento, chat, histórico, cache, assistente, RAG, avaliação
 docs/                        # retrieval-eval.md (Recall@5 / MRR@5)

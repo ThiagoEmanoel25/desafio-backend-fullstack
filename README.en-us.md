@@ -243,8 +243,9 @@ by e-mail and tasks by `(user_id, title)`, so running it twice duplicates nothin
 ### Locally (API outside Docker)
 
 ```bash
-# 1. Start only the database (exposed on localhost:5433)
-docker compose up db -d --wait
+# 1. Start only the database and Redis (localhost:5433 and localhost:6379;
+#    change them with POSTGRES_HOST_PORT / REDIS_HOST_PORT if a port is in use)
+docker compose up db redis -d --wait
 
 # 2. Create the test database (once)
 docker compose exec db createdb -U app desafio_test
@@ -258,6 +259,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 #    (do not edit .env - see the note below)
 export DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio
 export TEST_DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio_test
+export REDIS_URL=redis://localhost:6379/0   # the REDIS_HOST_PORT port, if you changed it
 export PYDANTIC_AI_NO_BANNER=1
 
 # 5. Migration, seed and API
@@ -269,7 +271,9 @@ uvicorn app.main:app --reload
 **Why export instead of editing `.env`:** `.env` is the file `docker compose` hands to the
 container, where the database is `db:5432`. Changing `DATABASE_URL` there breaks the
 containerised API. Environment variables win over `.env` in pydantic-settings, so exporting in
-your shell fixes the local case without breaking the Docker one. Keep the three lines in a
+your shell fixes the local case without breaking the Docker one. `REDIS_URL` follows the same rule
+(`redis:6379` inside Docker, `localhost` outside); without it the API still works, but with no cache
+and no chat history, logging `cache_degraded`. Keep the `export` lines in a
 `.dev-env.sh` of your own (it is in `.gitignore`) and `source` it before `pytest`, `alembic`,
 `uvicorn` and the seed.
 
@@ -279,12 +283,16 @@ your shell fixes the local case without breaking the Docker one. Keep the three 
 export TEST_DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/desafio_test
 pytest -v
 ruff check .
+
+# frontend (Vitest + Testing Library, no network)
+cd frontend && npm test
 ```
 
 The suite runs against a **separate** database (`desafio_test`): it creates the tables once per
 session, drops them at the end and truncates them after every test, and it refuses to start if
 `TEST_DATABASE_URL` is unset or equal to `DATABASE_URL`. An autouse fixture forces
-`pydantic_ai.models.ALLOW_MODEL_REQUESTS = False`, so no test can reach a real LLM.
+`pydantic_ai.models.ALLOW_MODEL_REQUESTS = False`, so no test can reach a real LLM. Every test gets a fresh `fakeredis`, and a file lock in `conftest.py` makes a second
+run on the same test database wait for the first one instead of wiping its rows.
 
 Frontend:
 
@@ -326,24 +334,28 @@ app/
 ├── core/
 │   ├── database.py          # AsyncEngine and session factory
 │   ├── security.py          # JWT and password hashing (bcrypt)
+│   ├── cache.py             # Best-effort Redis (a failure is a cache miss, never an outage)
 │   └── logging.py           # setup_logging() + JsonFormatter
-├── models/                  # User · Task (SQLAlchemy 2.0, Mapped[...])
+├── models/                  # User · Task · TaskSearchIndex (SQLAlchemy 2.0, Mapped[...])
 ├── schemas/                 # auth · task · chat · assistance (Pydantic v2)
 ├── repositories/            # Queries, always scoped by user_id
-├── services/                # task_service · task_assistant_service
+├── services/                # task_service · task_assistant_service · task_retrieval (hybrid search + rerank)
 └── agent/
-    ├── agent.py             # Chat agent (create_task tool)
+    ├── agent.py             # Chat agent (create_task, list_tasks, search_task_memory)
+    ├── history.py           # Chat history in Redis, bounded and with a TTL
     ├── task_assistant.py    # Assistant, output_type=TaskAssistance
-    ├── tools.py             # create_task_tool (user_id comes from ctx.deps)
+    ├── tools.py             # Chat tools (user_id always from ctx.deps)
     ├── prompts.py           # Static prompts of both agents
     └── deps.py              # AgentDeps · AssistantDeps · 503 exceptions
 frontend/
 └── src/
     ├── api/                 # client.ts (ApiError) · auth · tasks · chat
     ├── pages/               # LoginPage · TasksPage (single 401 logout seam)
-    ├── components/          # TaskForm, TaskList, ChatPanel, TaskAssistantPanel
+    ├── components/          # AppHeader, TaskForm, TaskFilters, TaskList, ChatPanel, TaskAssistantPanel, Badge…
+    ├── test/                # Vitest + Testing Library (login, list states, filters, SSE chat)
     └── types.ts             # Types mirroring the API schemas
-tests/                       # conftest + auth, tasks, isolation, chat, assistant, logging
+tests/                       # auth, tasks, isolation, chat, history, cache, assistant, RAG, retrieval eval
+docs/                        # retrieval-eval.md (Recall@5 / MRR@5)
 seed/                        # seed_data.py (idempotent, 2 users)
 ```
 

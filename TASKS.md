@@ -10,6 +10,24 @@ obrigatório.
 
 ## Contrato de escopo
 
+### Fechamento da entrega com administração
+
+- [x] Integrar e publicar a implementação na `main` do fork.
+- [x] Clonar a `main` publicada e aplicar todas as migrations em banco vazio
+      separado (`desafio_delivery_admin_check`).
+- [x] Executar seed duas vezes nesse banco: 10 tarefas, sem duplicação.
+- [x] Executar a suíte com código do clone remoto: 95 testes aprovados.
+- [x] Frontend: 11 testes aprovados, lint sem avisos e build aprovado.
+- [x] Disponibilizar painel administrativo para listar e ativar/desativar contas.
+- [x] Testar 401/403, bloqueio de conta e impossibilidade de conceder privilégio
+      pelo cadastro público.
+- [x] Deixar os serviços locais ativos: frontend 5173, API 8000, Redis 6381.
+
+Estes resultados substituem os bloqueios históricos de publicação e validação
+registrados nas fases abaixo. O clone remoto foi executado usando containers
+da infraestrutura local e banco de aplicação novo; não é uma nova máquina.
+Provisionar administrador: `docker compose exec api python -m seed.create_admin`.
+
 Extensão posterior autorizada: painel administrativo de contas. Cada tenant
 continua sendo um usuário. Inclui listagem paginada e ativação/desativação,
 permissão administrativa verificada no banco e provisionamento explícito por

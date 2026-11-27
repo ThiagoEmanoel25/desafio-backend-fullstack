@@ -188,7 +188,7 @@ If you had one more week, what would you improve or add to the project, and why?
 ### Prerequisites
 
 - Docker and Docker Compose
-- (Optional) Python 3.11+ and Node.js 20+ to run outside Docker
+- (Optional) Python 3.11+ and Node.js 24 LTS (or 22.22+) to run outside Docker. The app itself runs on Node 20.19+, but the frontend tests (Vitest 5 + jsdom) need 22.22+ or 24.15+; the frontend Docker image already uses `node:24-alpine`.
 
 ### With Docker Compose (recommended)
 

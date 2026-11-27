@@ -242,7 +242,7 @@ Se você tivesse mais uma semana, o que melhoraria ou adicionaria no projeto? Po
 ### Pré-requisitos
 
 - Docker e Docker Compose
-- (Opcional) Python 3.11+ e Node.js 20+ para rodar fora do Docker
+- (Opcional) Python 3.11+ e Node.js 24 LTS (ou 22.22+) para rodar fora do Docker. O app em si roda a partir do Node 20.19, mas os testes do frontend (Vitest 5 + jsdom) exigem 22.22+ ou 24.15+; a imagem Docker do frontend já usa `node:24-alpine`.
 
 ### Com Docker Compose (recomendado)
 

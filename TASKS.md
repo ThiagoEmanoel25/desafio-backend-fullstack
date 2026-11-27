@@ -47,6 +47,7 @@ obrigatório.
 - RAG agêntico com ferramentas de escrita além de `create_task`.
 - Redis Cluster, observabilidade distribuída ou infraestrutura de produção.
 - React Query, paginação, filtros avançados, frontend tests e CI.
+  _(Exceção posterior, a pedido do Thiago: testes de frontend com Vitest e filtros simples de status e prioridade na UI. React Query, paginação na UI e CI continuam fora.)_
 - Qualquer outro item opcional do README.
 
 `user_id` é a fronteira de isolamento. Ele sempre vem do JWT e do contexto da
@@ -54,7 +55,7 @@ requisição, nunca de argumentos produzidos pela LLM.
 
 ## Regras de execução
 
-- [x] Trabalhar em branches `feature/...` pequenas.
+- [ ] Trabalhar em branches `feature/...` pequenas. _(parcial: o obrigatório inteiro (fases 0 a 7) ficou numa só branch, `feature/mandatory-scope`, com 17 commits; os diferenciais foram em branches separadas, uma por task)_
 - [x] Fazer commits convencionais e focados.
 - [x] Não iniciar os diferenciais antes de todo o obrigatório estar verde.
 - [x] Se um diferencial ficar parcial, removê-lo da entrega em vez de manter um
@@ -78,7 +79,7 @@ entregues e verificáveis.
 
 - [x] Usar o fork público `ThiagoEmanoel25/desafio-backend-fullstack` como
       `origin` e o repositório original como `upstream`.
-- [x] Criar a branch `feature/project-foundation`. _(não foi criada com esse nome; a fase foi implementada no commit `ada0f65` (`test: configure isolated async test database`) e integrada à `feature/mandatory-scope`.)_
+- [ ] Criar a branch `feature/project-foundation`. _(não feito com esse nome: a fase 0 entrou direto na `feature/mandatory-scope`, commit `ada0f65` (`test: configure isolated async test database`); não existe branch `feature/project-foundation` no reflog local nem no remoto)_
 - [x] Criar `.env` local a partir de `.env.example` sem versionar segredos.
 - [x] Definir `TEST_DATABASE_URL` para um PostgreSQL separado.
 - [x] Configurar fixtures assíncronas e override de `get_db`.
@@ -190,7 +191,7 @@ Commit sugerido: `feat: add task creation agent`
       `steps`, `risks` e `clarifying_questions`.
 - [x] Criar agente separado com `output_type=TaskAssistance`.
 - [x] Buscar a tarefa pelo par `user_id + task_id`.
-- [x] Buscar no máximo cinco tarefas abertas do mesmo usuário e departamento.
+- [x] Buscar no máximo cinco tarefas abertas do mesmo usuário e departamento. _(a Fase 11 trocou por recuperação relevante; este critério virou o fallback e um peso do re-ranking)_
 - [x] Excluir a própria tarefa do contexto complementar.
 - [x] Enviar apenas título, descrição, status, prioridade e departamento.
 - [x] Separar instruções fixas do contexto dinâmico.
@@ -468,7 +469,7 @@ Commits sugeridos:
 - [x] Atualizar README com arquitetura, decisões, degradações e limites.
 - [x] Incluir credenciais do seed e respostas finais do questionário.
 - [ ] Confirmar que o repositório público executa a partir de um clone limpo. _(pendente: o push ao GitHub está bloqueado, 403)_
-- [x] Confirmar que nenhum terceiro diferencial foi implementado. _(não há terceiro diferencial não documentado: streaming, filtros na UI e testes de frontend foram autorizados e registrados no README como extensões do escopo.)_
+- [ ] Confirmar que nenhum terceiro diferencial foi implementado. _(não vale como escrito: a pedido do Thiago entraram também chat com streaming, filtros na UI e testes de frontend, todos testados e registrados no README)_
 
 ## Definição de pronto
 

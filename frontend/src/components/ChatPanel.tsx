@@ -95,7 +95,9 @@ export default function ChatPanel({
       failed = true
       if (onApiError(err)) return
       setError(
-        err instanceof ApiError && err.status === 503
+        err instanceof ApiError && err.status === 429
+          ? 'Limite diário de IA atingido. Tente novamente amanhã (UTC).'
+          : err instanceof ApiError && err.status === 503
           ? UNAVAILABLE
           : 'Não foi possível falar com o assistente.',
       )

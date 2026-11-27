@@ -30,6 +30,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.ai_quota import reserve_ai
 from app.models.task import Task
 from app.models.task_search_index import TS_CONFIG, TaskSearchIndex
 from app.schemas.task import TaskPriority, TaskStatus
@@ -105,6 +106,7 @@ async def index_task(db: AsyncSession, task: Task) -> TaskSearchIndex:
     row.embedding, row.embedding_model = None, None
     if model is not None:
         try:
+            await reserve_ai(db, task.user_id)
             row.embedding = (await embed([content], input_type="document"))[0]
             row.embedding_model = model
         except Exception:
@@ -226,6 +228,7 @@ async def _vector(db, user_id, query, base) -> list[tuple[uuid.UUID, float]]:
     if not rows:
         return []
     try:
+        await reserve_ai(db, user_id)
         query_vector = (await embed([query], input_type="query"))[0]
     except Exception:
         logger.warning(

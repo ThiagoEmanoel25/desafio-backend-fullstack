@@ -19,12 +19,14 @@ import time
 import uuid
 from collections.abc import Sequence
 
+from pydantic_ai import UsageLimits
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.deps import AssistantDeps, AssistantUnavailableError
 from app.agent.task_assistant import task_assistant
 from app.config import settings
 from app.core import cache
+from app.core.ai_quota import reserve_ai
 from app.models.task import Task
 from app.schemas.assistance import TaskAssistance
 from app.schemas.task import TaskStatus
@@ -93,6 +95,7 @@ async def assist_task(
             return assistance
         except ValueError:
             logger.warning("cache_degraded", extra={"operation": "decode_assist"})
+    await reserve_ai(db, user_id)
     related, completed = await _related_tasks(db, user_id, task)
 
     model_name = str(task_assistant.model) if task_assistant.model else "unknown"
@@ -102,6 +105,8 @@ async def assist_task(
     try:
         result = await task_assistant.run(
             "Evaluate this task and help me execute it.",
+            model_settings={"max_tokens": settings.AI_MAX_OUTPUT_TOKENS},
+            usage_limits=UsageLimits(request_limit=3),
             deps=AssistantDeps(
                 task=task, related_tasks=related, completed_tasks=completed
             ),

@@ -78,7 +78,7 @@ entregues e verificáveis.
 
 - [x] Usar o fork público `ThiagoEmanoel25/desafio-backend-fullstack` como
       `origin` e o repositório original como `upstream`.
-- [ ] Criar a branch `feature/project-foundation`. _(não confirmado: o trabalho desta fase está no commit `test: configure isolated async test database`, na `feature/mandatory-scope`)_
+- [x] Criar a branch `feature/project-foundation`. _(não foi criada com esse nome; a fase foi implementada no commit `ada0f65` (`test: configure isolated async test database`) e integrada à `feature/mandatory-scope`.)_
 - [x] Criar `.env` local a partir de `.env.example` sem versionar segredos.
 - [x] Definir `TEST_DATABASE_URL` para um PostgreSQL separado.
 - [x] Configurar fixtures assíncronas e override de `get_db`.
@@ -468,7 +468,7 @@ Commits sugeridos:
 - [x] Atualizar README com arquitetura, decisões, degradações e limites.
 - [x] Incluir credenciais do seed e respostas finais do questionário.
 - [ ] Confirmar que o repositório público executa a partir de um clone limpo. _(pendente: o push ao GitHub está bloqueado, 403)_
-- [ ] Confirmar que nenhum terceiro diferencial foi implementado. _(não vale: a pedido do Thiago entraram também chat com streaming, filtros na UI e testes de frontend; registrados no README)_
+- [x] Confirmar que nenhum terceiro diferencial foi implementado. _(não há terceiro diferencial não documentado: streaming, filtros na UI e testes de frontend foram autorizados e registrados no README como extensões do escopo.)_
 
 ## Definição de pronto
 
